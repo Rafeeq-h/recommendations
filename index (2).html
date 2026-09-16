@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>الاقتراحات والأفكار</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Moment for Time -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/ar.js"></script>
+    <!-- Firebase SDK (v8 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        @font-face {
+            font-family: 'Ara Hamah Homs';
+            src: local('Ara Hamah Homs'), local('AraHamahHoms-Regular');
+        }
+        body {
+            font-family: 'Ara Hamah Homs', 'Tajawal', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .bg-screen1 {
+            background-image: url('bg1.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        .bg-screen2 {
+            background-image: url('bg2.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        .fb-post {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            left: 0;
+            background-color: #fff;
+            min-width: 120px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .dropdown-content.show {
+            display: block;
+        }
+        .dropdown-content a {
+            color: black;
+            padding: 10px 12px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+        /* Scoped scrollbar for comments */
+        .comments-section {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        /* Utility */
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body id="app" v-cloak>
+
+    <!-- Screen 1: Home / Submit Idea -->
+    <div v-if="currentView === 'home'" class="bg-screen1 flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white/90 backdrop-blur p-6 rounded-xl shadow-xl mt-10">
+            <h1 class="text-2xl font-bold text-center mb-6 text-blue-600">شاركنا أفكارك واقتراحاتك</h1>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 font-bold mb-2">الاسم</label>
+                <input type="text" v-model="currentUser.name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="أدخل اسمك">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 font-bold mb-2">رقم الموبايل</label>
+                <input type="tel" v-model="currentUser.phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="أدخل رقم الموبايل">
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-gray-700 font-bold mb-2">الاقتراح / الفكرة</label>
+                <textarea v-model="newPostText" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="اكتب اقتراحك هنا..."></textarea>
+            </div>
+            
+            <button @click="submitPost" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200 mb-4 shadow-lg text-lg">
+                إرسال
+            </button>
+            
+            <div class="flex flex-col gap-3">
+                <button @click="goToFeed('all')" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 rounded-lg transition duration-200 shadow">
+                    عرض اقتراحات الآخرين
+                </button>
+                <button @click="goToFeed('mine')" class="w-full bg-green-100 hover:bg-green-200 text-green-800 font-bold py-2 rounded-lg transition duration-200 shadow">
+                    اقتراحاتي
+                </button>
+            </div>
+        </div>
+        
+        <button v-if="isAdmin" @click="currentView = 'admin'" class="fixed bottom-4 left-4 bg-red-600 text-white px-4 py-2 rounded-full shadow-lg font-bold">
+            لوحة الإدارة
+        </button>
+    </div>
+
+    <!-- Screen 2: Feed -->
+    <div v-if="currentView === 'feed'" class="bg-screen2 min-h-screen p-4 pb-20">
+        <div class="w-full max-w-2xl mx-auto pt-6">
+            <div class="flex justify-between items-center bg-white/90 p-4 rounded-xl shadow mb-6 backdrop-blur">
+                <h2 class="text-xl font-bold text-gray-800">{{ feedFilter === 'mine' ? 'اقتراحاتي' : 'اقتراحات الآخرين' }}</h2>
+                <button @click="currentView = 'home'" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg font-bold">
+                    <i class="fas fa-arrow-right ml-2"></i> رجوع
+                </button>
+            </div>
+
+            <!-- Posts Loop -->
+            <div v-for="post in filteredPosts" :key="post.id" class="fb-post mb-6 p-4">
+                <!-- Post Header -->
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xl ml-3">
+                            {{ post.name.charAt(0) }}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900">{{ post.name }}</h3>
+                            <p class="text-xs text-gray-500">{{ formatTime(post.timestamp) }}</p>
+                        </div>
+                    </div>
+                    <!-- Admin Delete Post -->
+                    <button v-if="isAdmin" @click="deletePost(post.id)" class="text-red-500 hover:text-red-700" title="حذف المقترح">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                
+                <!-- Post Content -->
+                <p class="text-gray-800 text-lg mb-4 whitespace-pre-wrap">{{ post.text }}</p>
+                
+                <!-- Post Stats (Likes count) -->
+                <div class="flex justify-between items-center text-sm text-gray-500 border-b pb-2 mb-2">
+                    <div>
+                        <i class="fas fa-thumbs-up text-blue-500"></i> {{ getReactCount(post.likes) }} 
+                        <i class="fas fa-thumbs-down text-red-500 ml-2"></i> {{ getReactCount(post.dislikes) }}
+                    </div>
+                    <div>{{ Object.keys(post.comments || {}).length }} تعليقات</div>
+                </div>
+                
+                <!-- Post Actions (Like / Dislike / Comment) -->
+                <div class="flex justify-around items-center border-b pb-2 mb-4">
+                    <button @click="reactPost(post.id, 'like')" :class="{'text-blue-600 font-bold': hasReacted(post.likes)}" class="flex-1 text-center py-1 hover:bg-gray-100 rounded text-gray-600">
+                        <i class="far fa-thumbs-up"></i> أعجبني
+                    </button>
+                    <button @click="reactPost(post.id, 'dislike')" :class="{'text-red-600 font-bold': hasReacted(post.dislikes)}" class="flex-1 text-center py-1 hover:bg-gray-100 rounded text-gray-600">
+                        <i class="far fa-thumbs-down"></i> لم يعجبني
+                    </button>
+                    <button @click="focusComment(post.id)" class="flex-1 text-center py-1 hover:bg-gray-100 rounded text-gray-600">
+                        <i class="far fa-comment"></i> تعليق
+                    </button>
+                </div>
+                
+                <!-- Comments Section -->
+                <div class="comments-section pr-2">
+                    <div v-for="comment in post.commentsList" :key="comment.id" class="mb-4">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center font-bold ml-2 shrink-0">
+                                {{ comment.name.charAt(0) }}
+                            </div>
+                            <div class="flex-1">
+                                <div class="bg-gray-100 p-3 rounded-2xl relative inline-block min-w-[200px] w-full">
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="font-bold text-sm">{{ comment.name }}</h4>
+                                        
+                                        <!-- 3 Dots Menu for Comment Owner or Admin -->
+                                        <div class="dropdown" v-if="comment.phone === currentUser.phone || isAdmin" @click.stop="toggleMenu(comment.id)">
+                                            <button class="text-gray-500 hover:text-gray-700 px-2"><i class="fas fa-ellipsis-v"></i></button>
+                                            <div :id="'menu-'+comment.id" class="dropdown-content mt-1">
+                                                <a v-if="canEditComment(comment) && comment.phone === currentUser.phone" @click="startEditComment(post.id, comment)">تعديل</a>
+                                                <a @click="deleteComment(post.id, comment.id)" class="text-red-500">حذف</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <p v-if="editingCommentId !== comment.id" class="text-gray-800 text-sm mt-1 whitespace-pre-wrap">{{ comment.text }}</p>
+                                    
+                                    <!-- Edit input -->
+                                    <div v-if="editingCommentId === comment.id" class="mt-2">
+                                        <textarea v-model="editCommentText" class="w-full p-2 border rounded text-sm" rows="2"></textarea>
+                                        <div class="flex gap-2 mt-1 justify-end">
+                                            <button @click="cancelEdit" class="text-xs text-gray-500">إلغاء</button>
+                                            <button @click="saveEditComment(post.id, comment.id)" class="text-xs bg-blue-500 text-white px-2 py-1 rounded">حفظ</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Comment Actions & Time -->
+                                <div class="flex items-center gap-4 text-xs text-gray-500 mt-1 mr-2 font-bold">
+                                    <span>{{ formatTime(comment.timestamp) }}</span>
+                                    <button @click="reactComment(post.id, comment.id, 'like')" :class="{'text-blue-600': hasReacted(comment.likes)}">أعجبني ({{ getReactCount(comment.likes) }})</button>
+                                    <button @click="reactComment(post.id, comment.id, 'dislike')" :class="{'text-red-600': hasReacted(comment.dislikes)}">لم يعجبني ({{ getReactCount(comment.dislikes) }})</button>
+                                    <button @click="prepareReply(post.id, comment)">رد</button>
+                                </div>
+                                
+                                <!-- Replies -->
+                                <div v-if="comment.repliesList && comment.repliesList.length > 0" class="mt-2 mr-6 border-r-2 border-gray-200 pr-3">
+                                    <div v-for="reply in comment.repliesList" :key="reply.id" class="mb-2">
+                                        <div class="flex items-start">
+                                            <div class="w-6 h-6 bg-gray-200 text-xs rounded-full flex items-center justify-center font-bold ml-2 shrink-0">
+                                                {{ reply.name.charAt(0) }}
+                                            </div>
+                                            <div class="flex-1">
+                                                <div class="bg-gray-100 p-2 rounded-2xl inline-block w-full">
+                                                    <div class="flex justify-between">
+                                                        <h4 class="font-bold text-xs">{{ reply.name }}</h4>
+                                                        <!-- 3 Dots Menu for Reply -->
+                                                        <div class="dropdown" v-if="reply.phone === currentUser.phone || isAdmin" @click.stop="toggleMenu(reply.id)">
+                                                            <button class="text-gray-500 hover:text-gray-700 px-2"><i class="fas fa-ellipsis-v"></i></button>
+                                                            <div :id="'menu-'+reply.id" class="dropdown-content mt-1">
+                                                                <a v-if="canEditComment(reply) && reply.phone === currentUser.phone" @click="startEditReply(post.id, comment.id, reply)">تعديل</a>
+                                                                <a @click="deleteReply(post.id, comment.id, reply.id)" class="text-red-500">حذف</a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <p v-if="editingReplyId !== reply.id" class="text-gray-800 text-xs mt-1 whitespace-pre-wrap"><span class="text-blue-500 font-bold" v-if="reply.replyToName">@{{reply.replyToName}}</span> {{ reply.text }}</p>
+                                                    
+                                                    <!-- Edit Reply -->
+                                                    <div v-if="editingReplyId === reply.id" class="mt-1">
+                                                        <textarea v-model="editReplyText" class="w-full p-1 border rounded text-xs" rows="2"></textarea>
+                                                        <div class="flex gap-2 mt-1 justify-end">
+                                                            <button @click="cancelEditReply" class="text-[10px] text-gray-500">إلغاء</button>
+                                                            <button @click="saveEditReply(post.id, comment.id, reply.id)" class="text-[10px] bg-blue-500 text-white px-2 py-1 rounded">حفظ</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Reply Actions -->
+                                                <div class="flex items-center gap-3 text-[10px] text-gray-500 mt-1 mr-2 font-bold">
+                                                    <span>{{ formatTime(reply.timestamp) }}</span>
+                                                    <button @click="reactReply(post.id, comment.id, reply.id, 'like')" :class="{'text-blue-600': hasReacted(reply.likes)}">أعجبني ({{ getReactCount(reply.likes) }})</button>
+                                                    <button @click="reactReply(post.id, comment.id, reply.id, 'dislike')" :class="{'text-red-600': hasReacted(reply.dislikes)}">لم يعجبني ({{ getReactCount(reply.dislikes) }})</button>
+                                                    <button @click="prepareReply(post.id, comment, reply.name)">رد</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Write Comment Box -->
+                <div class="mt-4 flex items-center gap-2" :id="'comment-box-' + post.id">
+                    <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shrink-0">
+                        {{ currentUser.name ? currentUser.name.charAt(0) : '?' }}
+                    </div>
+                    <div class="flex-1 relative">
+                        <div v-if="replyingTo[post.id]" class="absolute -top-6 right-2 text-xs bg-gray-200 px-2 py-1 rounded-t-lg flex justify-between items-center text-gray-700">
+                            <span>الرد على: {{ replyingTo[post.id].name }}</span>
+                            <button @click="cancelReply(post.id)" class="mr-2 text-red-500"><i class="fas fa-times"></i></button>
+                        </div>
+                        <input type="text" v-model="newComments[post.id]" @keyup.enter="submitComment(post.id)" class="w-full bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="اكتب تعليقاً...">
+                    </div>
+                    <button @click="submitComment(post.id)" class="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div v-if="filteredPosts.length === 0" class="text-center text-white bg-black/50 p-6 rounded-xl backdrop-blur">
+                <p class="text-xl">لا توجد اقتراحات حالياً.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 3: Admin -->
+    <div v-if="currentView === 'admin'" class="min-h-screen bg-gray-100 p-6">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">لوحة تحكم الإدارة</h1>
+                <button @click="currentView = 'home'" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg font-bold">
+                    عودة للرئيسية
+                </button>
+            </div>
+            
+            <!-- Metrics -->
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow border-t-4 border-blue-500">
+                    <h3 class="text-gray-500 text-lg mb-1">إجمالي الزيارات</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ metrics.totalVisits }}</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow border-t-4 border-green-500">
+                    <h3 class="text-gray-500 text-lg mb-1">إجمالي الأشخاص الفريدين</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ metrics.uniqueVisitors }}</p>
+                </div>
+            </div>
+            
+            <!-- All Posts List (Admin View) -->
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <div class="bg-gray-800 text-white px-6 py-4">
+                    <h2 class="text-xl font-bold">جميع المقترحات</h2>
+                </div>
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right border-collapse min-w-[800px]">
+                            <thead>
+                                <tr class="border-b-2 border-gray-200 text-gray-600">
+                                    <th class="py-3 px-2">الاسم</th>
+                                    <th class="py-3 px-2">رقم الموبايل</th>
+                                    <th class="py-3 px-2 w-1/2">المقترح</th>
+                                    <th class="py-3 px-2">التاريخ</th>
+                                    <th class="py-3 px-2">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="post in posts" :key="post.id" class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-2 font-bold">{{ post.name }}</td>
+                                    <td class="py-3 px-2">{{ post.phone }}</td>
+                                    <td class="py-3 px-2 text-sm">{{ post.text }}</td>
+                                    <td class="py-3 px-2 text-xs text-gray-500">{{ formatTime(post.timestamp) }}</td>
+                                    <td class="py-3 px-2">
+                                        <button @click="deletePost(post.id)" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded">
+                                            مسح
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="posts.length === 0">
+                                    <td colspan="5" class="text-center py-6 text-gray-500">لا توجد مقترحات.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Logic -->
+    <script>
+        // Firebase Config reusing from existing index.html
+        const firebaseConfig = {
+            databaseURL: "https://rafeeq-eltareeq-default-rtdb.firebaseio.com"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+        
+        // Setup Moment Arabic locale
+        moment.locale('ar');
+
+        const app = Vue.createApp({
+            data() {
+                return {
+                    currentView: 'home',
+                    feedFilter: 'all', // 'all' or 'mine'
+                    isAdmin: false,
+                    
+                    currentUser: {
+                        name: '',
+                        phone: ''
+                    },
+                    
+                    newPostText: '',
+                    newComments: {},
+                    replyingTo: {}, // postId -> { commentId, name }
+                    
+                    posts: [],
+                    metrics: {
+                        totalVisits: 0,
+                        uniqueVisitors: 0
+                    },
+                    
+                    // Edit Comment State
+                    editingCommentId: null,
+                    editCommentText: '',
+                    
+                    // Edit Reply State
+                    editingReplyId: null,
+                    editReplyText: ''
+                }
+            },
+            computed: {
+                filteredPosts() {
+                    let list = [...this.posts];
+                    if (this.feedFilter === 'mine' && this.currentUser.phone) {
+                        list = list.filter(p => p.phone === this.currentUser.phone);
+                    }
+                    // Sort by timestamp desc
+                    return list.sort((a, b) => b.timestamp - a.timestamp);
+                }
+            },
+            methods: {
+                formatTime(ts) {
+                    return moment(ts).format('YYYY/MM/DD hh:mm A');
+                },
+                canEditComment(comment) {
+                    const diffMins = moment().diff(moment(comment.timestamp), 'minutes');
+                    return diffMins <= 15;
+                },
+                getReactCount(reactObj) {
+                    return reactObj ? Object.keys(reactObj).length : 0;
+                },
+                hasReacted(reactObj) {
+                    return reactObj && reactObj[this.currentUser.phone];
+                },
+                
+                // Navigation
+                goToFeed(filter) {
+                    if (!this.currentUser.name || !this.currentUser.phone) {
+                        alert("يرجى إدخال الاسم ورقم الموبايل أولاً");
+                        return;
+                    }
+                    localStorage.setItem('ideasUser', JSON.stringify(this.currentUser));
+                    this.feedFilter = filter;
+                    this.currentView = 'feed';
+                },
+                
+                // Posts
+                submitPost() {
+                    if (!this.currentUser.name || !this.currentUser.phone || !this.newPostText) {
+                        alert("يرجى ملء جميع الخانات (الاسم، رقم الموبايل، الاقتراح)");
+                        return;
+                    }
+                    localStorage.setItem('ideasUser', JSON.stringify(this.currentUser));
+                    
+                    const postRef = db.ref('ideas_posts').push();
+                    postRef.set({
+                        name: this.currentUser.name,
+                        phone: this.currentUser.phone,
+                        text: this.newPostText,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    }).then(() => {
+                        this.newPostText = '';
+                        this.goToFeed('all');
+                    });
+                },
+                deletePost(postId) {
+                    if(confirm("هل أنت متأكد من مسح هذا المقترح بكل تعليقاته؟")) {
+                        db.ref('ideas_posts/' + postId).remove();
+                    }
+                },
+                reactPost(postId, type) {
+                    if (!this.currentUser.phone) {
+                        alert("يرجى تسجيل الدخول أولاً");
+                        return;
+                    }
+                    const phone = this.currentUser.phone;
+                    const postRef = db.ref('ideas_posts/' + postId);
+                    
+                    postRef.once('value', snap => {
+                        const post = snap.val();
+                        if(!post) return;
+                        let likes = post.likes || {};
+                        let dislikes = post.dislikes || {};
+                        
+                        if (type === 'like') {
+                            if (likes[phone]) {
+                                delete likes[phone]; // toggle off
+                            } else {
+                                likes[phone] = true;
+                                delete dislikes[phone];
+                            }
+                        } else {
+                            if (dislikes[phone]) {
+                                delete dislikes[phone]; // toggle off
+                            } else {
+                                dislikes[phone] = true;
+                                delete likes[phone];
+                            }
+                        }
+                        
+                        postRef.update({ likes, dislikes });
+                    });
+                },
+                
+                // Comments
+                focusComment(postId) {
+                    const el = document.getElementById('comment-box-' + postId);
+                    if(el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.querySelector('input').focus();
+                    }
+                },
+                prepareReply(postId, comment, replyName = null) {
+                    this.replyingTo[postId] = {
+                        commentId: comment.id,
+                        name: replyName || comment.name
+                    };
+                    this.focusComment(postId);
+                },
+                cancelReply(postId) {
+                    delete this.replyingTo[postId];
+                },
+                submitComment(postId) {
+                    if (!this.currentUser.phone) {
+                        alert("يرجى تسجيل الدخول باسمك ورقمك من الصفحة الرئيسية.");
+                        return;
+                    }
+                    const text = this.newComments[postId];
+                    if (!text || !text.trim()) return;
+                    
+                    const replyInfo = this.replyingTo[postId];
+                    
+                    if (replyInfo) {
+                        // It's a reply
+                        const replyRef = db.ref('ideas_posts/' + postId + '/comments/' + replyInfo.commentId + '/replies').push();
+                        replyRef.set({
+                            name: this.currentUser.name,
+                            phone: this.currentUser.phone,
+                            text: text,
+                            replyToName: replyInfo.name,
+                            timestamp: firebase.database.ServerValue.TIMESTAMP
+                        });
+                    } else {
+                        // It's a comment
+                        const commentRef = db.ref('ideas_posts/' + postId + '/comments').push();
+                        commentRef.set({
+                            name: this.currentUser.name,
+                            phone: this.currentUser.phone,
+                            text: text,
+                            timestamp: firebase.database.ServerValue.TIMESTAMP
+                        });
+                    }
+                    
+                    this.newComments[postId] = '';
+                    delete this.replyingTo[postId];
+                },
+                deleteComment(postId, commentId) {
+                    if(confirm("هل أنت متأكد من حذف هذا التعليق؟")) {
+                        db.ref('ideas_posts/' + postId + '/comments/' + commentId).remove();
+                    }
+                },
+                deleteReply(postId, commentId, replyId) {
+                    if(confirm("هل أنت متأكد من حذف هذا الرد؟")) {
+                        db.ref('ideas_posts/' + postId + '/comments/' + commentId + '/replies/' + replyId).remove();
+                    }
+                },
+                reactComment(postId, commentId, type) {
+                    if (!this.currentUser.phone) return;
+                    const phone = this.currentUser.phone;
+                    const ref = db.ref('ideas_posts/' + postId + '/comments/' + commentId);
+                    
+                    ref.once('value', snap => {
+                        const data = snap.val();
+                        if(!data) return;
+                        let likes = data.likes || {};
+                        let dislikes = data.dislikes || {};
+                        
+                        if (type === 'like') {
+                            if (likes[phone]) delete likes[phone];
+                            else { likes[phone] = true; delete dislikes[phone]; }
+                        } else {
+                            if (dislikes[phone]) delete dislikes[phone];
+                            else { dislikes[phone] = true; delete likes[phone]; }
+                        }
+                        ref.update({ likes, dislikes });
+                    });
+                },
+                reactReply(postId, commentId, replyId, type) {
+                    if (!this.currentUser.phone) return;
+                    const phone = this.currentUser.phone;
+                    const ref = db.ref('ideas_posts/' + postId + '/comments/' + commentId + '/replies/' + replyId);
+                    
+                    ref.once('value', snap => {
+                        const data = snap.val();
+                        if(!data) return;
+                        let likes = data.likes || {};
+                        let dislikes = data.dislikes || {};
+                        
+                        if (type === 'like') {
+                            if (likes[phone]) delete likes[phone];
+                            else { likes[phone] = true; delete dislikes[phone]; }
+                        } else {
+                            if (dislikes[phone]) delete dislikes[phone];
+                            else { dislikes[phone] = true; delete likes[phone]; }
+                        }
+                        ref.update({ likes, dislikes });
+                    });
+                },
+                
+                // Editing
+                toggleMenu(id) {
+                    // close all menus
+                    document.querySelectorAll('.dropdown-content').forEach(el => {
+                        if(el.id !== 'menu-'+id) el.classList.remove('show');
+                    });
+                    document.getElementById('menu-'+id).classList.toggle('show');
+                },
+                startEditComment(postId, comment) {
+                    this.editingCommentId = comment.id;
+                    this.editCommentText = comment.text;
+                    // hide menu
+                    document.getElementById('menu-'+comment.id).classList.remove('show');
+                },
+                cancelEdit() {
+                    this.editingCommentId = null;
+                },
+                saveEditComment(postId, commentId) {
+                    if(!this.editCommentText.trim()) return;
+                    db.ref('ideas_posts/' + postId + '/comments/' + commentId).update({
+                        text: this.editCommentText
+                    }).then(() => {
+                        this.editingCommentId = null;
+                    });
+                },
+                startEditReply(postId, commentId, reply) {
+                    this.editingReplyId = reply.id;
+                    this.editReplyText = reply.text;
+                    document.getElementById('menu-'+reply.id).classList.remove('show');
+                },
+                cancelEditReply() {
+                    this.editingReplyId = null;
+                },
+                saveEditReply(postId, commentId, replyId) {
+                    if(!this.editReplyText.trim()) return;
+                    db.ref('ideas_posts/' + postId + '/comments/' + commentId + '/replies/' + replyId).update({
+                        text: this.editReplyText
+                    }).then(() => {
+                        this.editingReplyId = null;
+                    });
+                },
+                
+                // Fetch Data
+                loadPosts() {
+                    db.ref('ideas_posts').on('value', snapshot => {
+                        const data = snapshot.val();
+                        if (!data) {
+                            this.posts = [];
+                            return;
+                        }
+                        
+                        const parsedPosts = [];
+                        for (let postId in data) {
+                            const p = data[postId];
+                            
+                            // Parse Comments
+                            const commentsList = [];
+                            if (p.comments) {
+                                for (let cId in p.comments) {
+                                    const c = p.comments[cId];
+                                    
+                                    // Parse Replies
+                                    const repliesList = [];
+                                    if(c.replies) {
+                                        for (let rId in c.replies) {
+                                            repliesList.push({ id: rId, ...c.replies[rId] });
+                                        }
+                                        repliesList.sort((a,b) => a.timestamp - b.timestamp);
+                                    }
+                                    
+                                    commentsList.push({ id: cId, ...c, repliesList });
+                                }
+                                commentsList.sort((a,b) => a.timestamp - b.timestamp);
+                            }
+                            
+                            parsedPosts.push({ id: postId, ...p, commentsList });
+                        }
+                        this.posts = parsedPosts;
+                    });
+                },
+                loadMetrics() {
+                    db.ref('ideas_metrics').on('value', snap => {
+                        const val = snap.val();
+                        if(val) {
+                            this.metrics.totalVisits = val.visits || 0;
+                            // Count unique IPs/IDs
+                            this.metrics.uniqueVisitors = val.unique_visitors ? Object.keys(val.unique_visitors).length : 0;
+                        }
+                    });
+                },
+                recordVisit() {
+                    // Generate unique ID for this browser
+                    let uid = localStorage.getItem('ideas_uid');
+                    if(!uid) {
+                        uid = 'u_' + Math.random().toString(36).substring(2) + Date.now();
+                        localStorage.setItem('ideas_uid', uid);
+                    }
+                    
+                    // Increment visit
+                    db.ref('ideas_metrics/visits').set(firebase.database.ServerValue.increment(1));
+                    // Record unique visitor
+                    db.ref('ideas_metrics/unique_visitors/' + uid).set(true);
+                }
+            },
+            mounted() {
+                // Check Admin
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('admin') === 'true' || urlParams.get('admin') === '1') {
+                    this.isAdmin = true;
+                }
+                
+                // Load User
+                const savedUser = localStorage.getItem('ideasUser');
+                if (savedUser) {
+                    this.currentUser = JSON.parse(savedUser);
+                }
+                
+                // Global click for closing menus
+                document.addEventListener('click', (e) => {
+                    if(!e.target.closest('.dropdown')) {
+                        document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
+                    }
+                });
+
+                this.recordVisit();
+                this.loadPosts();
+                this.loadMetrics();
+                
+                // Keep 15-minute timer refreshing UI every minute so Edit button disappears accurately
+                setInterval(() => {
+                    this.$forceUpdate();
+                }, 60000);
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
