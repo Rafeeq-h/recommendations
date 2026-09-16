@@ -20,7 +20,9 @@
     <style>
         @font-face {
             font-family: 'Ara Hamah Homs';
-            src: local('Ara Hamah Homs'), local('AraHamahHoms-Regular');
+            src: url('Ara-Hamah-Homs.ttf') format('truetype'); /* تأكد من وجود هذا الملف في نفس المجلد */
+            font-weight: normal;
+            font-style: normal;
         }
         body {
             font-family: 'Ara Hamah Homs', 'Tajawal', sans-serif;
@@ -28,15 +30,17 @@
         }
         .bg-screen1 {
             background-image: url('bg1.jpg');
-            background-size: cover;
+            background-size: 100% 100%; /* لتغطية الشاشة بالكامل بدون قص الأطراف */
             background-position: center;
+            background-repeat: no-repeat;
             background-attachment: fixed;
             min-height: 100vh;
         }
         .bg-screen2 {
-            background-image: url('bg2.jpg');
-            background-size: cover;
+            background-image: url('bg1.jpg');
+            background-size: 100% 100%; /* لتغطية الشاشة بالكامل بدون قص الأطراف */
             background-position: center;
+            background-repeat: no-repeat;
             background-attachment: fixed;
             min-height: 100vh;
         }
@@ -86,56 +90,60 @@
 <body id="app" v-cloak>
 
     <!-- Screen 1: Home / Submit Idea -->
-    <div v-if="currentView === 'home'" class="bg-screen1 flex flex-col items-center justify-center p-4">
-        <div class="w-full max-w-md bg-white/90 backdrop-blur p-6 rounded-xl shadow-xl mt-10">
-            <h1 class="text-2xl font-bold text-center mb-6 text-blue-600">شاركنا أفكارك واقتراحاتك</h1>
+    <div v-if="currentView === 'home'" class="bg-screen1 flex flex-col items-center justify-center p-4 min-h-screen relative">
+        
+        <!-- مساحة فارغة من الأعلى لتفادي تغطية النص المكتوب على الصورة -->
+        <div class="w-full max-w-md p-2 mt-[25vh] mb-[15vh] z-10">
+            <!-- تمت إزالة الخلفية البيضاء ليكون التصميم متناسقاً مع الصورة -->
             
             <div class="mb-4">
-                <label class="block text-gray-700 font-bold mb-2">الاسم</label>
-                <input type="text" v-model="currentUser.name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="أدخل اسمك">
+                <label class="block text-gray-900 font-bold mb-2 text-lg drop-shadow-md">الاسم</label>
+                <input type="text" v-model="currentUser.name" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600" placeholder="أدخل اسمك">
             </div>
             
             <div class="mb-4">
-                <label class="block text-gray-700 font-bold mb-2">رقم الموبايل</label>
-                <input type="tel" v-model="currentUser.phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="أدخل رقم الموبايل">
+                <label class="block text-gray-900 font-bold mb-2 text-lg drop-shadow-md">رقم الموبايل</label>
+                <input type="tel" v-model="currentUser.phone" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600" placeholder="أدخل رقم الموبايل">
             </div>
             
             <div class="mb-6">
-                <label class="block text-gray-700 font-bold mb-2">الاقتراح / الفكرة</label>
-                <textarea v-model="newPostText" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="اكتب اقتراحك هنا..."></textarea>
+                <label class="block text-gray-900 font-bold mb-2 text-lg drop-shadow-md">الاقتراح / الفكرة</label>
+                <textarea v-model="newPostText" rows="4" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600 resize-none" placeholder="اكتب اقتراحك هنا..."></textarea>
             </div>
             
-            <button @click="submitPost" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200 mb-4 shadow-lg text-lg">
+            <button @click="submitPost" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200 mb-4 shadow-lg text-lg border-2 border-blue-800">
                 إرسال
             </button>
             
-            <div class="flex flex-col gap-3">
-                <button @click="goToFeed('all')" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 rounded-lg transition duration-200 shadow">
+            <div class="flex flex-col gap-3 pb-4"> <!-- تم تعديل المسافة السفلية لتكون ديناميكية -->
+                <button @click="goToFeed('all')" class="w-full bg-white/50 hover:bg-white/80 text-gray-900 font-bold py-2 rounded-lg transition duration-200 shadow border-2 border-gray-700 backdrop-blur-sm">
                     عرض اقتراحات الآخرين
                 </button>
-                <button @click="goToFeed('mine')" class="w-full bg-green-100 hover:bg-green-200 text-green-800 font-bold py-2 rounded-lg transition duration-200 shadow">
+                <button @click="goToFeed('mine')" class="w-full bg-green-200/60 hover:bg-green-300/80 text-green-900 font-bold py-2 rounded-lg transition duration-200 shadow border-2 border-green-800 backdrop-blur-sm">
                     اقتراحاتي
                 </button>
             </div>
         </div>
         
-        <button v-if="isAdmin" @click="currentView = 'admin'" class="fixed bottom-4 left-4 bg-red-600 text-white px-4 py-2 rounded-full shadow-lg font-bold">
+        <button v-if="isAdmin" @click="currentView = 'admin'" class="absolute bottom-4 left-4 bg-red-600 text-white px-4 py-2 rounded-full shadow-lg font-bold z-20">
             لوحة الإدارة
         </button>
     </div>
 
     <!-- Screen 2: Feed -->
-    <div v-if="currentView === 'feed'" class="bg-screen2 min-h-screen p-4 pb-20">
-        <div class="w-full max-w-2xl mx-auto pt-6">
-            <div class="flex justify-between items-center bg-white/90 p-4 rounded-xl shadow mb-6 backdrop-blur">
-                <h2 class="text-xl font-bold text-gray-800">{{ feedFilter === 'mine' ? 'اقتراحاتي' : 'اقتراحات الآخرين' }}</h2>
-                <button @click="currentView = 'home'" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg font-bold">
+    <div v-if="currentView === 'feed'" class="bg-screen2 min-h-screen p-4 pb-32">
+        <!-- pt-32 لترك مساحة للنص في الأعلى -->
+        <div class="w-full max-w-2xl mx-auto pt-32">
+            
+            <div class="flex justify-between items-center bg-white/60 p-4 rounded-xl shadow mb-6 backdrop-blur border border-gray-300">
+                <h2 class="text-xl font-bold text-gray-900 drop-shadow-sm">{{ feedFilter === 'mine' ? 'اقتراحاتي' : 'اقتراحات الآخرين' }}</h2>
+                <button @click="currentView = 'home'" class="bg-gray-800/80 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-bold transition">
                     <i class="fas fa-arrow-right ml-2"></i> رجوع
                 </button>
             </div>
 
             <!-- Posts Loop -->
-            <div v-for="post in filteredPosts" :key="post.id" class="fb-post mb-6 p-4">
+            <div v-for="post in filteredPosts" :key="post.id" class="fb-post mb-6 p-4 bg-white/80 backdrop-blur border border-gray-200">
                 <!-- Post Header -->
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex items-center">
