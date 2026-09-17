@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>الاقتراحات والأفكار</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,39 +20,76 @@
     <style>
         @font-face {
             font-family: 'Ara Hamah Homs';
-            src: url('Ara-Hamah-Homs.ttf') format('truetype'); /* تأكد من وجود هذا الملف في نفس المجلد */
+            src: url('Ara-Hamah-Homs.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
+        
         body {
             font-family: 'Ara Hamah Homs', 'Tajawal', sans-serif;
-            background-color: #f0f2f5;
-        }
-        .bg-screen1 {
-            background-image: url('bg1.jpg');
-            background-size: 100% 100%; /* لتغطية الشاشة بالكامل بدون قص الأطراف */
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+            margin: 0;
+            padding: 0;
+            background-color: #a3d9f5; /* لون لبني فاتح متناسق مع لون خلفية الصورة */
+            display: flex;
+            justify-content: center; /* توسيط التطبيق في الشاشة */
             min-height: 100vh;
         }
-        .bg-screen2 {
-            background-image: url('bg1.jpg');
-            background-size: 100% 100%; /* لتغطية الشاشة بالكامل بدون قص الأطراف */
+
+        /* حاوية التطبيق (شكل الموبايل) */
+        .app-container {
+            width: 100%;
+            max-width: 500px; /* تقليل العرض ليكون مثل الهاتف */
+            min-height: 100vh;
+            position: relative;
+            background-color: white;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1); /* ظل خفيف لفصل التطبيق عن الجوانب */
+            overflow: hidden;
+        }
+
+        /* إعدادات الخلفية المشتركة */
+        .bg-screen {
+            background-size: 100% 100%;
             background-position: center;
             background-repeat: no-repeat;
-            background-attachment: fixed;
-            min-height: 100vh;
+            position: absolute; /* absolute inside relative app-container */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
         }
+
+        /* خلفية الشاشة الأولى (الرئيسية) */
+        .bg-home {
+            background-image: url('bg1.jpg');
+        }
+
+        /* خلفية الشاشة الثانية (التعليقات والاقتراحات) */
+        .bg-feed {
+            background-image: url('bg2.jpg');
+        }
+
+        /* إخفاء شريط التمرير (Scrollbar) ليكون الشكل أنظف */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
         .fb-post {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.85);
             border-radius: 12px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            backdrop-filter: blur(4px);
         }
+
         .dropdown {
             position: relative;
             display: inline-block;
         }
+
         .dropdown-content {
             display: none;
             position: absolute;
@@ -60,13 +97,15 @@
             background-color: #fff;
             min-width: 120px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
+            z-index: 50;
             border-radius: 8px;
             overflow: hidden;
         }
+
         .dropdown-content.show {
             display: block;
         }
+
         .dropdown-content a {
             color: black;
             padding: 10px 12px;
@@ -75,197 +114,207 @@
             font-size: 14px;
             cursor: pointer;
         }
+
         .dropdown-content a:hover {
             background-color: #f1f1f1;
         }
-        /* Scoped scrollbar for comments */
-        .comments-section {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        /* Utility */
+
         [v-cloak] { display: none; }
     </style>
 </head>
-<body id="app" v-cloak>
+<body>
 
-    <!-- Screen 1: Home / Submit Idea -->
-    <div v-if="currentView === 'home'" class="bg-screen1 flex flex-col items-center justify-center p-4 min-h-screen relative">
+    <div id="app" v-cloak class="w-full flex justify-center">
         
-        <!-- مساحة فارغة من الأعلى لتفادي تغطية النص المكتوب على الصورة -->
-        <div class="w-full max-w-md p-2 mt-[25vh] mb-[15vh] z-10">
-            <!-- تمت إزالة الخلفية البيضاء ليكون التصميم متناسقاً مع الصورة -->
+        <!-- حاوية التطبيق المركزية -->
+        <div class="app-container">
             
-            <div class="mb-4">
-                <label class="block text-gray-900 font-bold mb-2 text-lg drop-shadow-md">الاسم</label>
-                <input type="text" v-model="currentUser.name" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600" placeholder="أدخل اسمك">
-            </div>
-            
-            <div class="mb-4">
-                <label class="block text-gray-900 font-bold mb-2 text-lg drop-shadow-md">رقم الموبايل</label>
-                <input type="tel" v-model="currentUser.phone" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600" placeholder="أدخل رقم الموبايل">
-            </div>
-            
-            <div class="mb-6">
-                <label class="block text-gray-900 font-bold mb-2 text-lg drop-shadow-md">الاقتراح / الفكرة</label>
-                <textarea v-model="newPostText" rows="4" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600 resize-none" placeholder="اكتب اقتراحك هنا..."></textarea>
-            </div>
-            
-            <button @click="submitPost" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200 mb-4 shadow-lg text-lg border-2 border-blue-800">
-                إرسال
-            </button>
-            
-            <div class="flex flex-col gap-3 pb-4"> <!-- تم تعديل المسافة السفلية لتكون ديناميكية -->
-                <button @click="goToFeed('all')" class="w-full bg-white/50 hover:bg-white/80 text-gray-900 font-bold py-2 rounded-lg transition duration-200 shadow border-2 border-gray-700 backdrop-blur-sm">
-                    عرض اقتراحات الآخرين
-                </button>
-                <button @click="goToFeed('mine')" class="w-full bg-green-200/60 hover:bg-green-300/80 text-green-900 font-bold py-2 rounded-lg transition duration-200 shadow border-2 border-green-800 backdrop-blur-sm">
-                    اقتراحاتي
-                </button>
-            </div>
-        </div>
-        
-        <button v-if="isAdmin" @click="currentView = 'admin'" class="absolute bottom-4 left-4 bg-red-600 text-white px-4 py-2 rounded-full shadow-lg font-bold z-20">
-            لوحة الإدارة
-        </button>
-    </div>
+            <!-- خلفية الموقع الثابتة التي تتغير حسب الشاشة -->
+            <div :class="['bg-screen', currentView === 'home' ? 'bg-home' : 'bg-feed']"></div>
 
-    <!-- Screen 2: Feed -->
-    <div v-if="currentView === 'feed'" class="bg-screen2 min-h-screen p-4 pb-32">
-        <!-- pt-32 لترك مساحة للنص في الأعلى -->
-        <div class="w-full max-w-2xl mx-auto pt-32">
-            
-            <div class="flex justify-between items-center bg-white/60 p-4 rounded-xl shadow mb-6 backdrop-blur border border-gray-300">
-                <h2 class="text-xl font-bold text-gray-900 drop-shadow-sm">{{ feedFilter === 'mine' ? 'اقتراحاتي' : 'اقتراحات الآخرين' }}</h2>
-                <button @click="currentView = 'home'" class="bg-gray-800/80 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-bold transition">
-                    <i class="fas fa-arrow-right ml-2"></i> رجوع
+            <!-- Screen 1: Home / Submit Idea -->
+            <div v-if="currentView === 'home'" class="relative z-10 w-full h-screen flex flex-col items-center">
+                
+                <!-- فاصل علوي لترك مساحة للنص الموجود في أعلى الصورة -->
+                <div class="w-full shrink-0" style="height: 25vh;"></div>
+                
+                <!-- منطقة المحتوى (الخانات والأزرار) - قابلة للتمرير إذا كانت الشاشة صغيرة حتى لا تغطي الصور -->
+                <div class="w-full flex-1 overflow-y-auto px-6 pb-2 no-scrollbar flex flex-col justify-start">
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-900 font-bold mb-1 text-lg drop-shadow-md">الاسم</label>
+                        <input type="text" v-model="currentUser.name" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600" placeholder="أدخل اسمك">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-900 font-bold mb-1 text-lg drop-shadow-md">رقم الموبايل</label>
+                        <input type="tel" v-model="currentUser.phone" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600" placeholder="أدخل رقم الموبايل">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-900 font-bold mb-1 text-lg drop-shadow-md">الاقتراح / الفكرة</label>
+                        <textarea v-model="newPostText" rows="3" class="w-full px-4 py-2 border-2 border-gray-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-600 text-gray-900 font-bold placeholder-gray-600 resize-none" placeholder="اكتب اقتراحك هنا..."></textarea>
+                    </div>
+                    
+                    <button @click="submitPost" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200 mb-4 shadow-lg text-lg border-2 border-blue-800">
+                        {{ isSubmitting ? 'جاري الإرسال...' : 'إرسال' }}
+                    </button>
+                    
+                    <div class="flex flex-col gap-3 mb-4">
+                        <button @click="goToFeed('all')" class="w-full bg-white/50 hover:bg-white/80 text-gray-900 font-bold py-2 rounded-lg transition duration-200 shadow border-2 border-gray-700 backdrop-blur-sm">
+                            عرض اقتراحات الآخرين
+                        </button>
+                        <button @click="goToFeed('mine')" class="w-full bg-green-200/60 hover:bg-green-300/80 text-green-900 font-bold py-2 rounded-lg transition duration-200 shadow border-2 border-green-800 backdrop-blur-sm">
+                            اقتراحاتي
+                        </button>
+                    </div>
+                </div>
+
+                <!-- فاصل سفلي لترك مساحة لصور الحيوانات في الأسفل -->
+                <div class="w-full shrink-0" style="height: 18vh;"></div>
+                
+                <button v-if="isAdmin" @click="currentView = 'admin'" class="absolute bottom-4 left-4 bg-red-600 text-white px-4 py-2 rounded-full shadow-lg font-bold z-20">
+                    لوحة الإدارة
                 </button>
             </div>
 
-            <!-- Posts Loop -->
-            <div v-for="post in filteredPosts" :key="post.id" class="fb-post mb-6 p-4 bg-white/80 backdrop-blur border border-gray-200">
-                <!-- Post Header -->
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xl ml-3">
-                            {{ post.name.charAt(0) }}
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900">{{ post.name }}</h3>
-                            <p class="text-xs text-gray-500">{{ formatTime(post.timestamp) }}</p>
-                        </div>
-                    </div>
-                    <!-- Admin Delete Post -->
-                    <button v-if="isAdmin" @click="deletePost(post.id)" class="text-red-500 hover:text-red-700" title="حذف المقترح">
-                        <i class="fas fa-trash"></i>
+            <!-- Screen 2: Feed -->
+            <div v-if="currentView === 'feed'" class="relative z-10 w-full h-screen flex flex-col items-center">
+                
+                <!-- فاصل علوي للنص (أصغر من الصفحة الأولى) -->
+                <div class="w-full shrink-0" style="height: 12vh;"></div>
+                
+                <!-- منطقة الاقتراحات (قابلة للتمرير) -->
+                <div class="w-full flex-1 overflow-y-auto px-6 pb-2 no-scrollbar">
+                <div class="flex justify-between items-center bg-white/60 p-3 rounded-xl shadow mb-6 backdrop-blur border border-gray-300 sticky top-0 z-20">
+                    <h2 class="text-lg font-bold text-gray-900 drop-shadow-sm">{{ feedFilter === 'mine' ? 'اقتراحاتي' : 'اقتراحات الآخرين' }}</h2>
+                    <button @click="currentView = 'home'" class="bg-gray-800/80 hover:bg-gray-900 text-white px-3 py-2 rounded-lg font-bold transition text-sm">
+                        <i class="fas fa-arrow-right ml-1"></i> رجوع
                     </button>
                 </div>
-                
-                <!-- Post Content -->
-                <p class="text-gray-800 text-lg mb-4 whitespace-pre-wrap">{{ post.text }}</p>
-                
-                <!-- Post Stats (Likes count) -->
-                <div class="flex justify-between items-center text-sm text-gray-500 border-b pb-2 mb-2">
-                    <div>
-                        <i class="fas fa-thumbs-up text-blue-500"></i> {{ getReactCount(post.likes) }} 
-                        <i class="fas fa-thumbs-down text-red-500 ml-2"></i> {{ getReactCount(post.dislikes) }}
-                    </div>
-                    <div>{{ Object.keys(post.comments || {}).length }} تعليقات</div>
-                </div>
-                
-                <!-- Post Actions (Like / Dislike / Comment) -->
-                <div class="flex justify-around items-center border-b pb-2 mb-4">
-                    <button @click="reactPost(post.id, 'like')" :class="{'text-blue-600 font-bold': hasReacted(post.likes)}" class="flex-1 text-center py-1 hover:bg-gray-100 rounded text-gray-600">
-                        <i class="far fa-thumbs-up"></i> أعجبني
-                    </button>
-                    <button @click="reactPost(post.id, 'dislike')" :class="{'text-red-600 font-bold': hasReacted(post.dislikes)}" class="flex-1 text-center py-1 hover:bg-gray-100 rounded text-gray-600">
-                        <i class="far fa-thumbs-down"></i> لم يعجبني
-                    </button>
-                    <button @click="focusComment(post.id)" class="flex-1 text-center py-1 hover:bg-gray-100 rounded text-gray-600">
-                        <i class="far fa-comment"></i> تعليق
-                    </button>
-                </div>
-                
-                <!-- Comments Section -->
-                <div class="comments-section pr-2">
-                    <div v-for="comment in post.commentsList" :key="comment.id" class="mb-4">
-                        <div class="flex items-start">
-                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center font-bold ml-2 shrink-0">
-                                {{ comment.name.charAt(0) }}
+
+                <!-- Posts Loop -->
+                <div v-for="post in filteredPosts" :key="post.id" class="fb-post mb-6 p-4 border border-gray-300">
+                    <!-- Post Header -->
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xl ml-3">
+                                {{ post.name.charAt(0) }}
                             </div>
-                            <div class="flex-1">
-                                <div class="bg-gray-100 p-3 rounded-2xl relative inline-block min-w-[200px] w-full">
-                                    <div class="flex justify-between items-start">
-                                        <h4 class="font-bold text-sm">{{ comment.name }}</h4>
+                            <div>
+                                <h3 class="font-bold text-gray-900">{{ post.name }}</h3>
+                                <p class="text-xs text-gray-600">{{ formatTime(post.timestamp) }}</p>
+                            </div>
+                        </div>
+                        <!-- Admin Delete Post -->
+                        <button v-if="isAdmin" @click="deletePost(post.id)" class="text-red-500 hover:text-red-700" title="حذف المقترح">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Post Content -->
+                    <p class="text-gray-900 text-base mb-4 whitespace-pre-wrap">{{ post.text }}</p>
+                    
+                    <!-- Post Stats (Likes count) -->
+                    <div class="flex justify-between items-center text-sm text-gray-700 border-b border-gray-300 pb-2 mb-2 font-bold">
+                        <div>
+                            <i class="fas fa-thumbs-up text-blue-600"></i> {{ getReactCount(post.likes) }} 
+                            <i class="fas fa-thumbs-down text-red-600 ml-2"></i> {{ getReactCount(post.dislikes) }}
+                        </div>
+                        <div>{{ Object.keys(post.comments || {}).length }} تعليقات</div>
+                    </div>
+                    
+                    <!-- Post Actions (Like / Dislike / Comment) -->
+                    <div class="flex justify-around items-center border-b border-gray-300 pb-2 mb-4">
+                        <button @click="reactPost(post.id, 'like')" :class="{'text-blue-600 font-bold': hasReacted(post.likes)}" class="flex-1 text-center py-1 hover:bg-gray-200 rounded text-gray-800 font-bold text-sm">
+                            <i class="far fa-thumbs-up"></i> أعجبني
+                        </button>
+                        <button @click="reactPost(post.id, 'dislike')" :class="{'text-red-600 font-bold': hasReacted(post.dislikes)}" class="flex-1 text-center py-1 hover:bg-gray-200 rounded text-gray-800 font-bold text-sm">
+                            <i class="far fa-thumbs-down"></i> لم يعجبني
+                        </button>
+                        <button @click="focusComment(post.id)" class="flex-1 text-center py-1 hover:bg-gray-200 rounded text-gray-800 font-bold text-sm">
+                            <i class="far fa-comment"></i> تعليق
+                        </button>
+                    </div>
+                    
+                    <!-- Comments Section -->
+                    <div class="max-h-[300px] overflow-y-auto pr-1">
+                        <div v-for="comment in post.commentsList" :key="comment.id" class="mb-4">
+                            <div class="flex items-start">
+                                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center font-bold ml-2 shrink-0">
+                                    {{ comment.name.charAt(0) }}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="bg-gray-200/80 p-2 rounded-2xl relative inline-block min-w-[200px] w-full">
+                                        <div class="flex justify-between items-start">
+                                            <h4 class="font-bold text-sm text-gray-900">{{ comment.name }}</h4>
+                                            
+                                            <!-- 3 Dots Menu for Comment Owner or Admin -->
+                                            <div class="dropdown" v-if="comment.phone === currentUser.phone || isAdmin" @click.stop="toggleMenu(comment.id)">
+                                                <button class="text-gray-600 hover:text-gray-900 px-2"><i class="fas fa-ellipsis-v"></i></button>
+                                                <div :id="'menu-'+comment.id" class="dropdown-content mt-1">
+                                                    <a v-if="canEditComment(comment) && comment.phone === currentUser.phone" @click="startEditComment(post.id, comment)">تعديل</a>
+                                                    <a @click="deleteComment(post.id, comment.id)" class="text-red-600 font-bold">حذف</a>
+                                                </div>
+                                            </div>
+                                        </div>
                                         
-                                        <!-- 3 Dots Menu for Comment Owner or Admin -->
-                                        <div class="dropdown" v-if="comment.phone === currentUser.phone || isAdmin" @click.stop="toggleMenu(comment.id)">
-                                            <button class="text-gray-500 hover:text-gray-700 px-2"><i class="fas fa-ellipsis-v"></i></button>
-                                            <div :id="'menu-'+comment.id" class="dropdown-content mt-1">
-                                                <a v-if="canEditComment(comment) && comment.phone === currentUser.phone" @click="startEditComment(post.id, comment)">تعديل</a>
-                                                <a @click="deleteComment(post.id, comment.id)" class="text-red-500">حذف</a>
+                                        <p v-if="editingCommentId !== comment.id" class="text-gray-900 text-sm mt-1 whitespace-pre-wrap">{{ comment.text }}</p>
+                                        
+                                        <!-- Edit input -->
+                                        <div v-if="editingCommentId === comment.id" class="mt-2">
+                                            <textarea v-model="editCommentText" class="w-full p-2 border rounded text-sm bg-white" rows="2"></textarea>
+                                            <div class="flex gap-2 mt-1 justify-end">
+                                                <button @click="cancelEdit" class="text-xs text-gray-600 font-bold">إلغاء</button>
+                                                <button @click="saveEditComment(post.id, comment.id)" class="text-xs bg-blue-600 text-white px-2 py-1 rounded font-bold">حفظ</button>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <p v-if="editingCommentId !== comment.id" class="text-gray-800 text-sm mt-1 whitespace-pre-wrap">{{ comment.text }}</p>
-                                    
-                                    <!-- Edit input -->
-                                    <div v-if="editingCommentId === comment.id" class="mt-2">
-                                        <textarea v-model="editCommentText" class="w-full p-2 border rounded text-sm" rows="2"></textarea>
-                                        <div class="flex gap-2 mt-1 justify-end">
-                                            <button @click="cancelEdit" class="text-xs text-gray-500">إلغاء</button>
-                                            <button @click="saveEditComment(post.id, comment.id)" class="text-xs bg-blue-500 text-white px-2 py-1 rounded">حفظ</button>
-                                        </div>
+                                    <!-- Comment Actions & Time -->
+                                    <div class="flex items-center gap-3 text-[11px] text-gray-600 mt-1 mr-2 font-bold">
+                                        <span>{{ formatTime(comment.timestamp) }}</span>
+                                        <button @click="reactComment(post.id, comment.id, 'like')" :class="{'text-blue-600': hasReacted(comment.likes)}">أعجبني ({{ getReactCount(comment.likes) }})</button>
+                                        <button @click="reactComment(post.id, comment.id, 'dislike')" :class="{'text-red-600': hasReacted(comment.dislikes)}">لم يعجبني ({{ getReactCount(comment.dislikes) }})</button>
+                                        <button @click="prepareReply(post.id, comment)">رد</button>
                                     </div>
-                                </div>
-                                
-                                <!-- Comment Actions & Time -->
-                                <div class="flex items-center gap-4 text-xs text-gray-500 mt-1 mr-2 font-bold">
-                                    <span>{{ formatTime(comment.timestamp) }}</span>
-                                    <button @click="reactComment(post.id, comment.id, 'like')" :class="{'text-blue-600': hasReacted(comment.likes)}">أعجبني ({{ getReactCount(comment.likes) }})</button>
-                                    <button @click="reactComment(post.id, comment.id, 'dislike')" :class="{'text-red-600': hasReacted(comment.dislikes)}">لم يعجبني ({{ getReactCount(comment.dislikes) }})</button>
-                                    <button @click="prepareReply(post.id, comment)">رد</button>
-                                </div>
-                                
-                                <!-- Replies -->
-                                <div v-if="comment.repliesList && comment.repliesList.length > 0" class="mt-2 mr-6 border-r-2 border-gray-200 pr-3">
-                                    <div v-for="reply in comment.repliesList" :key="reply.id" class="mb-2">
-                                        <div class="flex items-start">
-                                            <div class="w-6 h-6 bg-gray-200 text-xs rounded-full flex items-center justify-center font-bold ml-2 shrink-0">
-                                                {{ reply.name.charAt(0) }}
-                                            </div>
-                                            <div class="flex-1">
-                                                <div class="bg-gray-100 p-2 rounded-2xl inline-block w-full">
-                                                    <div class="flex justify-between">
-                                                        <h4 class="font-bold text-xs">{{ reply.name }}</h4>
-                                                        <!-- 3 Dots Menu for Reply -->
-                                                        <div class="dropdown" v-if="reply.phone === currentUser.phone || isAdmin" @click.stop="toggleMenu(reply.id)">
-                                                            <button class="text-gray-500 hover:text-gray-700 px-2"><i class="fas fa-ellipsis-v"></i></button>
-                                                            <div :id="'menu-'+reply.id" class="dropdown-content mt-1">
-                                                                <a v-if="canEditComment(reply) && reply.phone === currentUser.phone" @click="startEditReply(post.id, comment.id, reply)">تعديل</a>
-                                                                <a @click="deleteReply(post.id, comment.id, reply.id)" class="text-red-500">حذف</a>
+                                    
+                                    <!-- Replies -->
+                                    <div v-if="comment.repliesList && comment.repliesList.length > 0" class="mt-2 mr-4 border-r-2 border-gray-300 pr-2">
+                                        <div v-for="reply in comment.repliesList" :key="reply.id" class="mb-2">
+                                            <div class="flex items-start">
+                                                <div class="w-6 h-6 bg-gray-300 text-xs rounded-full flex items-center justify-center font-bold ml-2 shrink-0">
+                                                    {{ reply.name.charAt(0) }}
+                                                </div>
+                                                <div class="flex-1">
+                                                    <div class="bg-gray-200/80 p-2 rounded-2xl inline-block w-full">
+                                                        <div class="flex justify-between">
+                                                            <h4 class="font-bold text-xs text-gray-900">{{ reply.name }}</h4>
+                                                            <div class="dropdown" v-if="reply.phone === currentUser.phone || isAdmin" @click.stop="toggleMenu(reply.id)">
+                                                                <button class="text-gray-600 hover:text-gray-900 px-2"><i class="fas fa-ellipsis-v"></i></button>
+                                                                <div :id="'menu-'+reply.id" class="dropdown-content mt-1">
+                                                                    <a v-if="canEditComment(reply) && reply.phone === currentUser.phone" @click="startEditReply(post.id, comment.id, reply)">تعديل</a>
+                                                                    <a @click="deleteReply(post.id, comment.id, reply.id)" class="text-red-600 font-bold">حذف</a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <p v-if="editingReplyId !== reply.id" class="text-gray-900 text-xs mt-1 whitespace-pre-wrap"><span class="text-blue-600 font-bold" v-if="reply.replyToName">@{{reply.replyToName}}</span> {{ reply.text }}</p>
+                                                        
+                                                        <div v-if="editingReplyId === reply.id" class="mt-1">
+                                                            <textarea v-model="editReplyText" class="w-full p-1 border rounded text-xs bg-white" rows="2"></textarea>
+                                                            <div class="flex gap-2 mt-1 justify-end">
+                                                                <button @click="cancelEditReply" class="text-[10px] text-gray-600 font-bold">إلغاء</button>
+                                                                <button @click="saveEditReply(post.id, comment.id, reply.id)" class="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold">حفظ</button>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    
-                                                    <p v-if="editingReplyId !== reply.id" class="text-gray-800 text-xs mt-1 whitespace-pre-wrap"><span class="text-blue-500 font-bold" v-if="reply.replyToName">@{{reply.replyToName}}</span> {{ reply.text }}</p>
-                                                    
-                                                    <!-- Edit Reply -->
-                                                    <div v-if="editingReplyId === reply.id" class="mt-1">
-                                                        <textarea v-model="editReplyText" class="w-full p-1 border rounded text-xs" rows="2"></textarea>
-                                                        <div class="flex gap-2 mt-1 justify-end">
-                                                            <button @click="cancelEditReply" class="text-[10px] text-gray-500">إلغاء</button>
-                                                            <button @click="saveEditReply(post.id, comment.id, reply.id)" class="text-[10px] bg-blue-500 text-white px-2 py-1 rounded">حفظ</button>
-                                                        </div>
+                                                    <div class="flex items-center gap-2 text-[10px] text-gray-600 mt-1 mr-2 font-bold">
+                                                        <span>{{ formatTime(reply.timestamp) }}</span>
+                                                        <button @click="reactReply(post.id, comment.id, reply.id, 'like')" :class="{'text-blue-600': hasReacted(reply.likes)}">أعجبني ({{ getReactCount(reply.likes) }})</button>
+                                                        <button @click="reactReply(post.id, comment.id, reply.id, 'dislike')" :class="{'text-red-600': hasReacted(reply.dislikes)}">لم يعجبني ({{ getReactCount(reply.dislikes) }})</button>
+                                                        <button @click="prepareReply(post.id, comment, reply.name)">رد</button>
                                                     </div>
-                                                </div>
-                                                <!-- Reply Actions -->
-                                                <div class="flex items-center gap-3 text-[10px] text-gray-500 mt-1 mr-2 font-bold">
-                                                    <span>{{ formatTime(reply.timestamp) }}</span>
-                                                    <button @click="reactReply(post.id, comment.id, reply.id, 'like')" :class="{'text-blue-600': hasReacted(reply.likes)}">أعجبني ({{ getReactCount(reply.likes) }})</button>
-                                                    <button @click="reactReply(post.id, comment.id, reply.id, 'dislike')" :class="{'text-red-600': hasReacted(reply.dislikes)}">لم يعجبني ({{ getReactCount(reply.dislikes) }})</button>
-                                                    <button @click="prepareReply(post.id, comment, reply.name)">رد</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -274,114 +323,114 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Write Comment Box -->
+                    <div class="mt-4 flex items-center gap-2" :id="'comment-box-' + post.id">
+                        <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shrink-0">
+                            {{ currentUser.name ? currentUser.name.charAt(0) : '?' }}
+                        </div>
+                        <div class="flex-1 relative">
+                            <div v-if="replyingTo[post.id]" class="absolute -top-6 right-2 text-xs bg-gray-300 px-2 py-1 rounded-t-lg flex justify-between items-center text-gray-900 font-bold">
+                                <span>الرد على: {{ replyingTo[post.id].name }}</span>
+                                <button @click="cancelReply(post.id)" class="mr-2 text-red-600"><i class="fas fa-times"></i></button>
+                            </div>
+                            <input type="text" v-model="newComments[post.id]" @keyup.enter="submitComment(post.id)" class="w-full bg-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 font-bold text-gray-900" placeholder="اكتب تعليقاً...">
+                        </div>
+                        <button @click="submitComment(post.id)" class="text-blue-600 hover:bg-blue-100 p-2 rounded-full transition">
+                            <i class="fas fa-paper-plane text-xl"></i>
+                        </button>
+                    </div>
                 </div>
                 
-                <!-- Write Comment Box -->
-                <div class="mt-4 flex items-center gap-2" :id="'comment-box-' + post.id">
-                    <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shrink-0">
-                        {{ currentUser.name ? currentUser.name.charAt(0) : '?' }}
-                    </div>
-                    <div class="flex-1 relative">
-                        <div v-if="replyingTo[post.id]" class="absolute -top-6 right-2 text-xs bg-gray-200 px-2 py-1 rounded-t-lg flex justify-between items-center text-gray-700">
-                            <span>الرد على: {{ replyingTo[post.id].name }}</span>
-                            <button @click="cancelReply(post.id)" class="mr-2 text-red-500"><i class="fas fa-times"></i></button>
-                        </div>
-                        <input type="text" v-model="newComments[post.id]" @keyup.enter="submitComment(post.id)" class="w-full bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="اكتب تعليقاً...">
-                    </div>
-                    <button @click="submitComment(post.id)" class="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
+                <div v-if="filteredPosts.length === 0" class="text-center text-gray-900 bg-white/70 font-bold p-6 rounded-xl backdrop-blur border border-gray-300">
+                    <p class="text-lg">لا توجد اقتراحات حالياً.</p>
                 </div>
             </div>
-            
-            <div v-if="filteredPosts.length === 0" class="text-center text-white bg-black/50 p-6 rounded-xl backdrop-blur">
-                <p class="text-xl">لا توجد اقتراحات حالياً.</p>
-            </div>
-        </div>
-    </div>
 
-    <!-- Screen 3: Admin -->
-    <div v-if="currentView === 'admin'" class="min-h-screen bg-gray-100 p-6">
-        <div class="max-w-4xl mx-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold text-gray-800">لوحة تحكم الإدارة</h1>
-                <button @click="currentView = 'home'" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg font-bold">
+            <!-- فاصل سفلي للحيوانات -->
+            <div class="w-full shrink-0" style="height: 18vh;"></div>
+        </div>
+
+        <!-- Screen 3: Admin -->
+        <div v-if="currentView === 'admin'" class="min-h-screen w-full bg-gray-100 p-4 relative z-50 overflow-y-auto">
+            <div class="flex justify-between items-center mb-6 max-w-4xl mx-auto">
+                <h1 class="text-2xl font-bold text-gray-800">لوحة الإدارة</h1>
+                <button @click="currentView = 'home'" class="bg-gray-300 hover:bg-gray-400 px-3 py-1 rounded-lg font-bold text-sm">
                     عودة للرئيسية
                 </button>
             </div>
             
-            <!-- Metrics -->
-            <div class="grid grid-cols-2 gap-4 mb-8">
-                <div class="bg-white p-6 rounded-xl shadow border-t-4 border-blue-500">
-                    <h3 class="text-gray-500 text-lg mb-1">إجمالي الزيارات</h3>
-                    <p class="text-4xl font-bold text-gray-800">{{ metrics.totalVisits }}</p>
+            <div class="grid grid-cols-2 gap-3 mb-6 max-w-4xl mx-auto">
+                <div class="bg-white p-4 rounded-xl shadow border-t-4 border-blue-500">
+                    <h3 class="text-gray-500 text-sm mb-1">الزيارات</h3>
+                    <p class="text-2xl font-bold text-gray-800">{{ metrics.totalVisits }}</p>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow border-t-4 border-green-500">
-                    <h3 class="text-gray-500 text-lg mb-1">إجمالي الأشخاص الفريدين</h3>
-                    <p class="text-4xl font-bold text-gray-800">{{ metrics.uniqueVisitors }}</p>
+                <div class="bg-white p-4 rounded-xl shadow border-t-4 border-green-500">
+                    <h3 class="text-gray-500 text-sm mb-1">أشخاص فريدين</h3>
+                    <p class="text-2xl font-bold text-gray-800">{{ metrics.uniqueVisitors }}</p>
                 </div>
             </div>
             
-            <!-- All Posts List (Admin View) -->
-            <div class="bg-white rounded-xl shadow overflow-hidden">
-                <div class="bg-gray-800 text-white px-6 py-4">
-                    <h2 class="text-xl font-bold">جميع المقترحات</h2>
+            <div class="bg-white rounded-xl shadow overflow-hidden text-sm max-w-4xl mx-auto">
+                <div class="bg-gray-800 text-white px-4 py-3">
+                    <h2 class="font-bold">المقترحات</h2>
                 </div>
-                <div class="p-6">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-right border-collapse min-w-[800px]">
-                            <thead>
-                                <tr class="border-b-2 border-gray-200 text-gray-600">
-                                    <th class="py-3 px-2">الاسم</th>
-                                    <th class="py-3 px-2">رقم الموبايل</th>
-                                    <th class="py-3 px-2 w-1/2">المقترح</th>
-                                    <th class="py-3 px-2">التاريخ</th>
-                                    <th class="py-3 px-2">إجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="post in posts" :key="post.id" class="border-b border-gray-100 hover:bg-gray-50">
-                                    <td class="py-3 px-2 font-bold">{{ post.name }}</td>
-                                    <td class="py-3 px-2">{{ post.phone }}</td>
-                                    <td class="py-3 px-2 text-sm">{{ post.text }}</td>
-                                    <td class="py-3 px-2 text-xs text-gray-500">{{ formatTime(post.timestamp) }}</td>
-                                    <td class="py-3 px-2">
-                                        <button @click="deletePost(post.id)" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded">
-                                            مسح
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr v-if="posts.length === 0">
-                                    <td colspan="5" class="text-center py-6 text-gray-500">لا توجد مقترحات.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="p-4 overflow-x-auto">
+                    <table class="w-full text-right border-collapse min-w-[500px]">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200 text-gray-600">
+                                <th class="py-2 px-1">الاسم</th>
+                                <th class="py-2 px-1">الموبايل</th>
+                                <th class="py-2 px-1 w-1/2">المقترح</th>
+                                <th class="py-2 px-1">إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="post in posts" :key="post.id" class="border-b border-gray-100">
+                                <td class="py-2 px-1 font-bold">{{ post.name }}</td>
+                                <td class="py-2 px-1">{{ post.phone }}</td>
+                                <td class="py-2 px-1 text-xs">{{ post.text }}</td>
+                                <td class="py-2 px-1">
+                                    <button @click="deletePost(post.id)" class="text-red-500 bg-red-50 px-2 py-1 rounded">مسح</button>
+                                </td>
+                            </tr>
+                            <tr v-if="posts.length === 0">
+                                <td colspan="4" class="text-center py-4 text-gray-500">لا توجد مقترحات.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+        </div> <!-- end app-container -->
+
     </div>
 
     <!-- App Logic -->
     <script>
-        // Firebase Config reusing from existing index.html
         const firebaseConfig = {
-            databaseURL: "https://rafeeq-eltareeq-default-rtdb.firebaseio.com"
+            apiKey: "AIzaSyCu7fHrMiJrnssUEyMAKE-pxSqEO9hU26w",
+            authDomain: "ideas-901b4.firebaseapp.com",
+            databaseURL: "https://ideas-901b4-default-rtdb.firebaseio.com",
+            projectId: "ideas-901b4",
+            storageBucket: "ideas-901b4.firebasestorage.app",
+            messagingSenderId: "274895005157",
+            appId: "1:274895005157:web:baf5c1ce003d0ea56bfb0c"
         };
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.database();
         
-        // Setup Moment Arabic locale
         moment.locale('ar');
 
         const app = Vue.createApp({
             data() {
                 return {
                     currentView: 'home',
-                    feedFilter: 'all', // 'all' or 'mine'
+                    feedFilter: 'all', 
                     isAdmin: false,
+                    isSubmitting: false,
                     
                     currentUser: {
                         name: '',
@@ -390,7 +439,7 @@
                     
                     newPostText: '',
                     newComments: {},
-                    replyingTo: {}, // postId -> { commentId, name }
+                    replyingTo: {}, 
                     
                     posts: [],
                     metrics: {
@@ -398,11 +447,8 @@
                         uniqueVisitors: 0
                     },
                     
-                    // Edit Comment State
                     editingCommentId: null,
                     editCommentText: '',
-                    
-                    // Edit Reply State
                     editingReplyId: null,
                     editReplyText: ''
                 }
@@ -411,9 +457,9 @@
                 filteredPosts() {
                     let list = [...this.posts];
                     if (this.feedFilter === 'mine' && this.currentUser.phone) {
-                        list = list.filter(p => p.phone === this.currentUser.phone);
+                        const userPhone = this.currentUser.phone.trim();
+                        list = list.filter(p => p.phone === userPhone);
                     }
-                    // Sort by timestamp desc
                     return list.sort((a, b) => b.timestamp - a.timestamp);
                 }
             },
@@ -422,8 +468,7 @@
                     return moment(ts).format('YYYY/MM/DD hh:mm A');
                 },
                 canEditComment(comment) {
-                    const diffMins = moment().diff(moment(comment.timestamp), 'minutes');
-                    return diffMins <= 15;
+                    return moment().diff(moment(comment.timestamp), 'minutes') <= 15;
                 },
                 getReactCount(reactObj) {
                     return reactObj ? Object.keys(reactObj).length : 0;
@@ -432,48 +477,89 @@
                     return reactObj && reactObj[this.currentUser.phone];
                 },
                 
-                // Navigation
                 goToFeed(filter) {
-                    if (!this.currentUser.name || !this.currentUser.phone) {
-                        alert("يرجى إدخال الاسم ورقم الموبايل أولاً");
+                    const name = (this.currentUser.name || '').trim();
+                    const phone = (this.currentUser.phone || '').trim();
+
+                    if (!name || !phone) {
+                        alert("يرجى إدخال الاسم ورقم الموبايل بشكل صحيح أولاً لتتمكن من تصفح الاقتراحات.");
                         return;
                     }
+                    this.currentUser.name = name;
+                    this.currentUser.phone = phone;
                     localStorage.setItem('ideasUser', JSON.stringify(this.currentUser));
+                    
                     this.feedFilter = filter;
                     this.currentView = 'feed';
                 },
                 
-                // Posts
                 submitPost() {
-                    if (!this.currentUser.name || !this.currentUser.phone || !this.newPostText) {
-                        alert("يرجى ملء جميع الخانات (الاسم، رقم الموبايل، الاقتراح)");
+                    const name = (this.currentUser.name || '').trim();
+                    const phone = (this.currentUser.phone || '').trim();
+                    const text = (this.newPostText || '').trim();
+
+                    if (!name || !phone || !text) {
+                        alert("يرجى ملء جميع الخانات (الاسم، رقم الموبايل، نص الاقتراح) بشكل صحيح قبل الإرسال. لا تتركها فارغة!");
                         return;
                     }
+                    
+                    this.isSubmitting = true;
+                    this.currentUser.name = name;
+                    this.currentUser.phone = phone;
                     localStorage.setItem('ideasUser', JSON.stringify(this.currentUser));
                     
-                    const postRef = db.ref('ideas_posts').push();
-                    postRef.set({
-                        name: this.currentUser.name,
-                        phone: this.currentUser.phone,
-                        text: this.newPostText,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP
-                    }).then(() => {
-                        this.newPostText = '';
-                        this.goToFeed('all');
-                    });
+                    let isRequestDone = false;
+                    
+                    // نظام أمان: إذا تأخرت قاعدة البيانات في الرد بسبب ضعف النت أو حظر من سيرفرات فايربيز
+                    const timeout = setTimeout(() => {
+                        if (!isRequestDone) {
+                            this.isSubmitting = false;
+                            isRequestDone = true;
+                            alert("⚠️ طال وقت الإرسال جداً! يرجى التأكد من اتصالك بالإنترنت، أو أن قواعد حماية Firebase تسمح بالكتابة.");
+                        }
+                    }, 10000); // 10 ثواني كحد أقصى للانتظار
+                    
+                    try {
+                        const postRef = db.ref('ideas_posts').push();
+                        postRef.set({
+                            name: name,
+                            phone: phone,
+                            text: text,
+                            timestamp: firebase.database.ServerValue.TIMESTAMP
+                        }).then(() => {
+                            if (isRequestDone) return; // تم إلغاء الطلب مسبقاً
+                            isRequestDone = true;
+                            clearTimeout(timeout);
+                            this.newPostText = '';
+                            this.isSubmitting = false;
+                            this.goToFeed('all');
+                        }).catch(error => {
+                            if (isRequestDone) return;
+                            isRequestDone = true;
+                            clearTimeout(timeout);
+                            this.isSubmitting = false;
+                            console.error(error);
+                            alert("حدث خطأ أثناء إرسال الاقتراح: " + error.message);
+                        });
+                    } catch (e) {
+                        if (isRequestDone) return;
+                        isRequestDone = true;
+                        clearTimeout(timeout);
+                        this.isSubmitting = false;
+                        alert("خطأ برمجي أثناء الاتصال: " + e.message);
+                    }
                 },
+
                 deletePost(postId) {
-                    if(confirm("هل أنت متأكد من مسح هذا المقترح بكل تعليقاته؟")) {
+                    if(confirm("هل أنت متأكد من مسح هذا المقترح؟")) {
                         db.ref('ideas_posts/' + postId).remove();
                     }
                 },
+                
                 reactPost(postId, type) {
-                    if (!this.currentUser.phone) {
-                        alert("يرجى تسجيل الدخول أولاً");
-                        return;
-                    }
+                    if (!this.currentUser.phone) return;
                     const phone = this.currentUser.phone;
-                    const postRef = db.ref('ideas_posts/' + postId);
+                    const postRef = db.ref(`ideas_posts/${postId}`);
                     
                     postRef.once('value', snap => {
                         const post = snap.val();
@@ -482,26 +568,16 @@
                         let dislikes = post.dislikes || {};
                         
                         if (type === 'like') {
-                            if (likes[phone]) {
-                                delete likes[phone]; // toggle off
-                            } else {
-                                likes[phone] = true;
-                                delete dislikes[phone];
-                            }
+                            if (likes[phone]) delete likes[phone];
+                            else { likes[phone] = true; delete dislikes[phone]; }
                         } else {
-                            if (dislikes[phone]) {
-                                delete dislikes[phone]; // toggle off
-                            } else {
-                                dislikes[phone] = true;
-                                delete likes[phone];
-                            }
+                            if (dislikes[phone]) delete dislikes[phone];
+                            else { dislikes[phone] = true; delete likes[phone]; }
                         }
-                        
                         postRef.update({ likes, dislikes });
                     });
                 },
                 
-                // Comments
                 focusComment(postId) {
                     const el = document.getElementById('comment-box-' + postId);
                     if(el) {
@@ -509,6 +585,7 @@
                         el.querySelector('input').focus();
                     }
                 },
+                
                 prepareReply(postId, comment, replyName = null) {
                     this.replyingTo[postId] = {
                         commentId: comment.id,
@@ -516,22 +593,19 @@
                     };
                     this.focusComment(postId);
                 },
+                
                 cancelReply(postId) {
                     delete this.replyingTo[postId];
                 },
+                
                 submitComment(postId) {
-                    if (!this.currentUser.phone) {
-                        alert("يرجى تسجيل الدخول باسمك ورقمك من الصفحة الرئيسية.");
-                        return;
-                    }
+                    if (!this.currentUser.phone) return;
                     const text = this.newComments[postId];
                     if (!text || !text.trim()) return;
                     
                     const replyInfo = this.replyingTo[postId];
-                    
                     if (replyInfo) {
-                        // It's a reply
-                        const replyRef = db.ref('ideas_posts/' + postId + '/comments/' + replyInfo.commentId + '/replies').push();
+                        const replyRef = db.ref(`ideas_posts/${postId}/comments/${replyInfo.commentId}/replies`).push();
                         replyRef.set({
                             name: this.currentUser.name,
                             phone: this.currentUser.phone,
@@ -540,8 +614,7 @@
                             timestamp: firebase.database.ServerValue.TIMESTAMP
                         });
                     } else {
-                        // It's a comment
-                        const commentRef = db.ref('ideas_posts/' + postId + '/comments').push();
+                        const commentRef = db.ref(`ideas_posts/${postId}/comments`).push();
                         commentRef.set({
                             name: this.currentUser.name,
                             phone: this.currentUser.phone,
@@ -549,52 +622,26 @@
                             timestamp: firebase.database.ServerValue.TIMESTAMP
                         });
                     }
-                    
                     this.newComments[postId] = '';
                     delete this.replyingTo[postId];
                 },
+                
                 deleteComment(postId, commentId) {
-                    if(confirm("هل أنت متأكد من حذف هذا التعليق؟")) {
-                        db.ref('ideas_posts/' + postId + '/comments/' + commentId).remove();
-                    }
+                    if(confirm("مسح التعليق؟")) db.ref(`ideas_posts/${postId}/comments/${commentId}`).remove();
                 },
+                
                 deleteReply(postId, commentId, replyId) {
-                    if(confirm("هل أنت متأكد من حذف هذا الرد؟")) {
-                        db.ref('ideas_posts/' + postId + '/comments/' + commentId + '/replies/' + replyId).remove();
-                    }
+                    if(confirm("مسح الرد؟")) db.ref(`ideas_posts/${postId}/comments/${commentId}/replies/${replyId}`).remove();
                 },
+                
                 reactComment(postId, commentId, type) {
                     if (!this.currentUser.phone) return;
                     const phone = this.currentUser.phone;
-                    const ref = db.ref('ideas_posts/' + postId + '/comments/' + commentId);
-                    
+                    const ref = db.ref(`ideas_posts/${postId}/comments/${commentId}`);
                     ref.once('value', snap => {
                         const data = snap.val();
                         if(!data) return;
-                        let likes = data.likes || {};
-                        let dislikes = data.dislikes || {};
-                        
-                        if (type === 'like') {
-                            if (likes[phone]) delete likes[phone];
-                            else { likes[phone] = true; delete dislikes[phone]; }
-                        } else {
-                            if (dislikes[phone]) delete dislikes[phone];
-                            else { dislikes[phone] = true; delete likes[phone]; }
-                        }
-                        ref.update({ likes, dislikes });
-                    });
-                },
-                reactReply(postId, commentId, replyId, type) {
-                    if (!this.currentUser.phone) return;
-                    const phone = this.currentUser.phone;
-                    const ref = db.ref('ideas_posts/' + postId + '/comments/' + commentId + '/replies/' + replyId);
-                    
-                    ref.once('value', snap => {
-                        const data = snap.val();
-                        if(!data) return;
-                        let likes = data.likes || {};
-                        let dislikes = data.dislikes || {};
-                        
+                        let likes = data.likes || {}, dislikes = data.dislikes || {};
                         if (type === 'like') {
                             if (likes[phone]) delete likes[phone];
                             else { likes[phone] = true; delete dislikes[phone]; }
@@ -606,49 +653,59 @@
                     });
                 },
                 
-                // Editing
+                reactReply(postId, commentId, replyId, type) {
+                    if (!this.currentUser.phone) return;
+                    const phone = this.currentUser.phone;
+                    const ref = db.ref(`ideas_posts/${postId}/comments/${commentId}/replies/${replyId}`);
+                    ref.once('value', snap => {
+                        const data = snap.val();
+                        if(!data) return;
+                        let likes = data.likes || {}, dislikes = data.dislikes || {};
+                        if (type === 'like') {
+                            if (likes[phone]) delete likes[phone];
+                            else { likes[phone] = true; delete dislikes[phone]; }
+                        } else {
+                            if (dislikes[phone]) delete dislikes[phone];
+                            else { dislikes[phone] = true; delete likes[phone]; }
+                        }
+                        ref.update({ likes, dislikes });
+                    });
+                },
+                
                 toggleMenu(id) {
-                    // close all menus
                     document.querySelectorAll('.dropdown-content').forEach(el => {
                         if(el.id !== 'menu-'+id) el.classList.remove('show');
                     });
-                    document.getElementById('menu-'+id).classList.toggle('show');
+                    const menu = document.getElementById('menu-'+id);
+                    if(menu) menu.classList.toggle('show');
                 },
+                
                 startEditComment(postId, comment) {
                     this.editingCommentId = comment.id;
                     this.editCommentText = comment.text;
-                    // hide menu
                     document.getElementById('menu-'+comment.id).classList.remove('show');
                 },
-                cancelEdit() {
-                    this.editingCommentId = null;
-                },
+                cancelEdit() { this.editingCommentId = null; },
                 saveEditComment(postId, commentId) {
                     if(!this.editCommentText.trim()) return;
-                    db.ref('ideas_posts/' + postId + '/comments/' + commentId).update({
-                        text: this.editCommentText
-                    }).then(() => {
+                    db.ref(`ideas_posts/${postId}/comments/${commentId}`).update({ text: this.editCommentText }).then(() => {
                         this.editingCommentId = null;
                     });
                 },
+                
                 startEditReply(postId, commentId, reply) {
                     this.editingReplyId = reply.id;
                     this.editReplyText = reply.text;
                     document.getElementById('menu-'+reply.id).classList.remove('show');
                 },
-                cancelEditReply() {
-                    this.editingReplyId = null;
-                },
+                cancelEditReply() { this.editingReplyId = null; },
                 saveEditReply(postId, commentId, replyId) {
                     if(!this.editReplyText.trim()) return;
-                    db.ref('ideas_posts/' + postId + '/comments/' + commentId + '/replies/' + replyId).update({
-                        text: this.editReplyText
-                    }).then(() => {
+                    db.ref(`ideas_posts/${postId}/comments/${commentId}/replies/${replyId}`).update({ text: this.editReplyText }).then(() => {
                         this.editingReplyId = null;
                     });
                 },
                 
-                // Fetch Data
                 loadPosts() {
                     db.ref('ideas_posts').on('value', snapshot => {
                         const data = snapshot.val();
@@ -656,18 +713,13 @@
                             this.posts = [];
                             return;
                         }
-                        
                         const parsedPosts = [];
                         for (let postId in data) {
                             const p = data[postId];
-                            
-                            // Parse Comments
                             const commentsList = [];
                             if (p.comments) {
                                 for (let cId in p.comments) {
                                     const c = p.comments[cId];
-                                    
-                                    // Parse Replies
                                     const repliesList = [];
                                     if(c.replies) {
                                         for (let rId in c.replies) {
@@ -675,55 +727,50 @@
                                         }
                                         repliesList.sort((a,b) => a.timestamp - b.timestamp);
                                     }
-                                    
                                     commentsList.push({ id: cId, ...c, repliesList });
                                 }
                                 commentsList.sort((a,b) => a.timestamp - b.timestamp);
                             }
-                            
                             parsedPosts.push({ id: postId, ...p, commentsList });
                         }
                         this.posts = parsedPosts;
                     });
                 },
+                
                 loadMetrics() {
                     db.ref('ideas_metrics').on('value', snap => {
                         const val = snap.val();
                         if(val) {
                             this.metrics.totalVisits = val.visits || 0;
-                            // Count unique IPs/IDs
                             this.metrics.uniqueVisitors = val.unique_visitors ? Object.keys(val.unique_visitors).length : 0;
                         }
                     });
                 },
+                
                 recordVisit() {
-                    // Generate unique ID for this browser
                     let uid = localStorage.getItem('ideas_uid');
                     if(!uid) {
                         uid = 'u_' + Math.random().toString(36).substring(2) + Date.now();
                         localStorage.setItem('ideas_uid', uid);
                     }
-                    
-                    // Increment visit
                     db.ref('ideas_metrics/visits').set(firebase.database.ServerValue.increment(1));
-                    // Record unique visitor
-                    db.ref('ideas_metrics/unique_visitors/' + uid).set(true);
+                    db.ref(`ideas_metrics/unique_visitors/${uid}`).set(true);
                 }
             },
             mounted() {
-                // Check Admin
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('admin') === 'true' || urlParams.get('admin') === '1') {
                     this.isAdmin = true;
                 }
                 
-                // Load User
                 const savedUser = localStorage.getItem('ideasUser');
                 if (savedUser) {
-                    this.currentUser = JSON.parse(savedUser);
+                    try {
+                        const parsed = JSON.parse(savedUser);
+                        if(parsed.name && parsed.phone) this.currentUser = parsed;
+                    } catch(e) {}
                 }
                 
-                // Global click for closing menus
                 document.addEventListener('click', (e) => {
                     if(!e.target.closest('.dropdown')) {
                         document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
@@ -734,7 +781,6 @@
                 this.loadPosts();
                 this.loadMetrics();
                 
-                // Keep 15-minute timer refreshing UI every minute so Edit button disappears accurately
                 setInterval(() => {
                     this.$forceUpdate();
                 }, 60000);
