@@ -85,39 +85,7 @@
             backdrop-filter: blur(4px);
         }
 
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
 
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            left: 0;
-            background-color: #fff;
-            min-width: 120px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 50;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .dropdown-content.show {
-            display: block;
-        }
-
-        .dropdown-content a {
-            color: black;
-            padding: 10px 12px;
-            text-decoration: none;
-            display: block;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .dropdown-content a:hover {
-            background-color: #f1f1f1;
-        }
 
         [v-cloak] { display: none; }
     </style>
@@ -203,17 +171,64 @@
                             </div>
                             <div>
                                 <h3 class="font-bold text-gray-900">{{ post.name }}</h3>
-                                <p class="text-xs text-gray-600">{{ formatTime(post.timestamp) }}</p>
+                                <p class="text-xs text-gray-600">
+                                    {{ formatTime(post.timestamp) }}
+                                    <span v-if="post.edited" class="text-[10px] text-gray-400 font-normal mr-1">(تم تعديله)</span>
+                                </p>
                             </div>
                         </div>
-                        <!-- Admin Delete Post -->
-                        <button v-if="isAdmin" @click="deletePost(post.id)" class="text-red-500 hover:text-red-700" title="حذف المقترح">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        
+                        <!-- زر الـ 3 نقاط للمنشور (لصاحب المنشور أو الأدمن) -->
+                        <div class="relative" v-if="isCommentOwner(post)">
+                            <button 
+                                @click.stop="toggleDropdown('p_' + post.id)" 
+                                class="dropdown-trigger w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-600 transition" 
+                                title="خيارات المنشور">
+                                <i class="fas fa-ellipsis-h text-base"></i>
+                            </button>
+                            
+                            <!-- القائمة المنسدلة للمنشور -->
+                            <div 
+                                v-if="activeDropdownId === 'p_' + post.id" 
+                                class="dropdown-menu absolute left-0 top-full mt-1 bg-white shadow-2xl rounded-xl py-1.5 z-50 border border-gray-200 min-w-[155px] text-right"
+                                @click.stop>
+                                
+                                <div v-if="canModifyComment(post)">
+                                    <button 
+                                        @click="startEditPost(post); closeDropdown();" 
+                                        class="w-full text-right px-3 py-2 text-xs text-gray-800 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-between font-bold">
+                                        <span><i class="fas fa-edit ml-1.5 text-blue-500"></i> تعديل المقترح</span>
+                                        <span class="text-[10px] text-gray-400 font-normal">({{ getCommentRemainingMinutes(post) }}د متبقية)</span>
+                                    </button>
+                                    <button 
+                                        @click="deletePost(post.id); closeDropdown();" 
+                                        class="w-full text-right px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center font-bold">
+                                        <i class="fas fa-trash-alt ml-1.5 text-red-500"></i> حذف المقترح
+                                    </button>
+                                </div>
+                                
+                                <div v-else class="px-3 py-2 text-[11px] text-gray-500 text-center font-bold">
+                                    <span><i class="fas fa-clock text-amber-500 ml-1"></i>انتهت مهلة الـ 15 دقيقة</span>
+                                    <button 
+                                        v-if="isAdmin" 
+                                        @click="deletePost(post.id); closeDropdown();" 
+                                        class="w-full text-center mt-1 px-1 py-0.5 text-[10px] text-red-600 bg-red-50 rounded hover:bg-red-100 font-bold">
+                                        حذف (صلاحية إدارة)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- Post Content -->
-                    <p class="text-gray-900 text-base mb-4 whitespace-pre-wrap">{{ post.text }}</p>
+                    <!-- Post Content or In-place Edit Form -->
+                    <div v-if="editingPostId === post.id" class="mb-4">
+                        <textarea v-model="editPostText" class="w-full p-2.5 border-2 border-blue-400 rounded-lg text-sm bg-white font-bold text-gray-900 focus:outline-none" rows="3"></textarea>
+                        <div class="flex gap-2 mt-1.5 justify-end">
+                            <button @click="cancelEditPost" class="text-xs text-gray-600 hover:text-gray-900 font-bold px-3 py-1.5">إلغاء</button>
+                            <button @click="saveEditPost(post.id)" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg font-bold shadow">حفظ التعديل</button>
+                        </div>
+                    </div>
+                    <p v-else class="text-gray-900 text-base mb-4 whitespace-pre-wrap">{{ post.text }}</p>
                     
                     <!-- Post Stats (Likes count) -->
                     <div class="flex justify-between items-center text-sm text-gray-700 border-b border-gray-300 pb-2 mb-2 font-bold">
@@ -245,41 +260,77 @@
                                     {{ comment.name.charAt(0) }}
                                 </div>
                                 <div class="flex-1">
-                                    <div class="bg-gray-200/80 p-2 rounded-2xl relative inline-block min-w-[200px] w-full">
+                                    <div class="bg-gray-200/80 p-2.5 rounded-2xl relative inline-block min-w-[200px] w-full">
                                         <div class="flex justify-between items-start">
                                             <h4 class="font-bold text-sm text-gray-900">{{ comment.name }}</h4>
                                             
-                                            <!-- 3 Dots Menu for Comment Owner or Admin -->
-                                            <div class="dropdown" v-if="comment.phone === currentUser.phone || isAdmin" @click.stop="toggleMenu(comment.id)">
-                                                <button class="text-gray-600 hover:text-gray-900 px-2"><i class="fas fa-ellipsis-v"></i></button>
-                                                <div :id="'menu-'+comment.id" class="dropdown-content mt-1">
-                                                    <a v-if="canEditComment(comment) && comment.phone === currentUser.phone" @click="startEditComment(post.id, comment)">تعديل</a>
-                                                    <a @click="deleteComment(post.id, comment.id)" class="text-red-600 font-bold">حذف</a>
+                                            <!-- زر الـ 3 نقاط للتعليق (لصاحب التعليق أو الأدمن) -->
+                                            <div class="relative" v-if="isCommentOwner(comment)">
+                                                <button 
+                                                    @click.stop="toggleDropdown('c_' + comment.id)" 
+                                                    class="dropdown-trigger w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-300 text-gray-700 transition" 
+                                                    title="خيارات التعليق">
+                                                    <i class="fas fa-ellipsis-h text-sm"></i>
+                                                </button>
+                                                
+                                                <!-- القائمة المنسدلة للتعليق -->
+                                                <div 
+                                                    v-if="activeDropdownId === 'c_' + comment.id" 
+                                                    class="dropdown-menu absolute left-0 top-full mt-1 bg-white shadow-2xl rounded-xl py-1.5 z-50 border border-gray-200 min-w-[150px] text-right"
+                                                    @click.stop>
+                                                    
+                                                    <!-- في حالة عدم مرور 15 دقيقة: يسمح بالتعديل والحذف -->
+                                                    <div v-if="canModifyComment(comment)">
+                                                        <button 
+                                                            @click="startEditComment(post.id, comment); closeDropdown();" 
+                                                            class="w-full text-right px-3 py-1.5 text-xs text-gray-800 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-between font-bold">
+                                                            <span><i class="fas fa-edit ml-1.5 text-blue-500"></i> تعديل</span>
+                                                            <span class="text-[10px] text-gray-400 font-normal">({{ getCommentRemainingMinutes(comment) }}د متبقية)</span>
+                                                        </button>
+                                                        <button 
+                                                            @click="deleteComment(post.id, comment.id); closeDropdown();" 
+                                                            class="w-full text-right px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 flex items-center font-bold">
+                                                            <i class="fas fa-trash-alt ml-1.5 text-red-500"></i> حذف
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <!-- في حالة مرور 15 دقيقة: تنبيه بانتهاء المهلة -->
+                                                    <div v-else class="px-2.5 py-1.5 text-[11px] text-gray-500 text-center font-bold">
+                                                        <span><i class="fas fa-clock text-amber-500 ml-1"></i>انتهت مهلة الـ 15 دقيقة</span>
+                                                        <button 
+                                                            v-if="isAdmin" 
+                                                            @click="deleteComment(post.id, comment.id); closeDropdown();" 
+                                                            class="w-full text-center mt-1 px-1 py-0.5 text-[10px] text-red-600 bg-red-50 rounded hover:bg-red-100 font-bold">
+                                                            حذف (صلاحية إدارة)
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                         
+                                        <!-- نص التعليق -->
                                         <p v-if="editingCommentId !== comment.id" class="text-gray-900 text-sm mt-1 whitespace-pre-wrap">{{ comment.text }}</p>
                                         
-                                        <!-- Edit input -->
+                                        <!-- خانة تعديل التعليق المباشر -->
                                         <div v-if="editingCommentId === comment.id" class="mt-2">
-                                            <textarea v-model="editCommentText" class="w-full p-2 border rounded text-sm bg-white" rows="2"></textarea>
+                                            <textarea v-model="editCommentText" class="w-full p-2 border-2 border-blue-400 rounded-lg text-sm bg-white font-bold text-gray-900 focus:outline-none" rows="2"></textarea>
                                             <div class="flex gap-2 mt-1 justify-end">
-                                                <button @click="cancelEdit" class="text-xs text-gray-600 font-bold">إلغاء</button>
-                                                <button @click="saveEditComment(post.id, comment.id)" class="text-xs bg-blue-600 text-white px-2 py-1 rounded font-bold">حفظ</button>
+                                                <button @click="cancelEdit" class="text-xs text-gray-600 hover:text-gray-900 font-bold px-2 py-1">إلغاء</button>
+                                                <button @click="saveEditComment(post.id, comment.id)" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg font-bold shadow">حفظ التعديل</button>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <!-- Comment Actions & Time -->
+                                    <!-- تفاعلات التعليق والوقت -->
                                     <div class="flex items-center gap-3 text-[11px] text-gray-600 mt-1 mr-2 font-bold">
                                         <span>{{ formatTime(comment.timestamp) }}</span>
+                                        <span v-if="comment.edited" class="text-[10px] text-gray-400 font-normal">(تم تعديله)</span>
                                         <button @click="reactComment(post.id, comment.id, 'like')" :class="{'text-blue-600': hasReacted(comment.likes)}">أعجبني ({{ getReactCount(comment.likes) }})</button>
                                         <button @click="reactComment(post.id, comment.id, 'dislike')" :class="{'text-red-600': hasReacted(comment.dislikes)}">لم يعجبني ({{ getReactCount(comment.dislikes) }})</button>
                                         <button @click="prepareReply(post.id, comment)">رد</button>
                                     </div>
                                     
-                                    <!-- Replies -->
+                                    <!-- الردود (Replies) -->
                                     <div v-if="comment.repliesList && comment.repliesList.length > 0" class="mt-2 mr-4 border-r-2 border-gray-300 pr-2">
                                         <div v-for="reply in comment.repliesList" :key="reply.id" class="mb-2">
                                             <div class="flex items-start">
@@ -288,13 +339,46 @@
                                                 </div>
                                                 <div class="flex-1">
                                                     <div class="bg-gray-200/80 p-2 rounded-2xl inline-block w-full">
-                                                        <div class="flex justify-between">
+                                                        <div class="flex justify-between items-start">
                                                             <h4 class="font-bold text-xs text-gray-900">{{ reply.name }}</h4>
-                                                            <div class="dropdown" v-if="reply.phone === currentUser.phone || isAdmin" @click.stop="toggleMenu(reply.id)">
-                                                                <button class="text-gray-600 hover:text-gray-900 px-2"><i class="fas fa-ellipsis-v"></i></button>
-                                                                <div :id="'menu-'+reply.id" class="dropdown-content mt-1">
-                                                                    <a v-if="canEditComment(reply) && reply.phone === currentUser.phone" @click="startEditReply(post.id, comment.id, reply)">تعديل</a>
-                                                                    <a @click="deleteReply(post.id, comment.id, reply.id)" class="text-red-600 font-bold">حذف</a>
+                                                            
+                                                            <!-- زر الـ 3 نقاط للرد -->
+                                                            <div class="relative" v-if="isCommentOwner(reply)">
+                                                                <button 
+                                                                    @click.stop="toggleDropdown('r_' + reply.id)" 
+                                                                    class="dropdown-trigger w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-300 text-gray-700 transition" 
+                                                                    title="خيارات الرد">
+                                                                    <i class="fas fa-ellipsis-h text-xs"></i>
+                                                                </button>
+                                                                
+                                                                <div 
+                                                                    v-if="activeDropdownId === 'r_' + reply.id" 
+                                                                    class="dropdown-menu absolute left-0 top-full mt-1 bg-white shadow-2xl rounded-xl py-1.5 z-50 border border-gray-200 min-w-[140px] text-right"
+                                                                    @click.stop>
+                                                                    
+                                                                    <div v-if="canModifyComment(reply)">
+                                                                        <button 
+                                                                            @click="startEditReply(post.id, comment.id, reply); closeDropdown();" 
+                                                                            class="w-full text-right px-3 py-1.5 text-xs text-gray-800 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-between font-bold">
+                                                                            <span><i class="fas fa-edit ml-1 text-blue-500"></i> تعديل</span>
+                                                                            <span class="text-[10px] text-gray-400 font-normal">({{ getCommentRemainingMinutes(reply) }}د)</span>
+                                                                        </button>
+                                                                        <button 
+                                                                            @click="deleteReply(post.id, comment.id, reply.id); closeDropdown();" 
+                                                                            class="w-full text-right px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 flex items-center font-bold">
+                                                                            <i class="fas fa-trash-alt ml-1 text-red-500"></i> حذف
+                                                                        </button>
+                                                                    </div>
+                                                                    
+                                                                    <div v-else class="px-2 py-1 text-[10px] text-gray-500 text-center font-bold">
+                                                                        <span>انتهت مهلة الـ 15 دقيقة</span>
+                                                                        <button 
+                                                                            v-if="isAdmin" 
+                                                                            @click="deleteReply(post.id, comment.id, reply.id); closeDropdown();" 
+                                                                            class="w-full text-center mt-1 px-1 py-0.5 text-[10px] text-red-600 bg-red-50 rounded hover:bg-red-100 font-bold">
+                                                                            حذف (إدارة)
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -302,15 +386,16 @@
                                                         <p v-if="editingReplyId !== reply.id" class="text-gray-900 text-xs mt-1 whitespace-pre-wrap"><span class="text-blue-600 font-bold" v-if="reply.replyToName">@{{reply.replyToName}}</span> {{ reply.text }}</p>
                                                         
                                                         <div v-if="editingReplyId === reply.id" class="mt-1">
-                                                            <textarea v-model="editReplyText" class="w-full p-1 border rounded text-xs bg-white" rows="2"></textarea>
+                                                            <textarea v-model="editReplyText" class="w-full p-1 border-2 border-blue-400 rounded-lg text-xs bg-white font-bold text-gray-900 focus:outline-none" rows="2"></textarea>
                                                             <div class="flex gap-2 mt-1 justify-end">
-                                                                <button @click="cancelEditReply" class="text-[10px] text-gray-600 font-bold">إلغاء</button>
-                                                                <button @click="saveEditReply(post.id, comment.id, reply.id)" class="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold">حفظ</button>
+                                                                <button @click="cancelEditReply" class="text-[10px] text-gray-600 hover:text-gray-900 font-bold">إلغاء</button>
+                                                                <button @click="saveEditReply(post.id, comment.id, reply.id)" class="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg font-bold shadow">حفظ التعديل</button>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div class="flex items-center gap-2 text-[10px] text-gray-600 mt-1 mr-2 font-bold">
                                                         <span>{{ formatTime(reply.timestamp) }}</span>
+                                                        <span v-if="reply.edited" class="text-[9px] text-gray-400 font-normal">(معدل)</span>
                                                         <button @click="reactReply(post.id, comment.id, reply.id, 'like')" :class="{'text-blue-600': hasReacted(reply.likes)}">أعجبني ({{ getReactCount(reply.likes) }})</button>
                                                         <button @click="reactReply(post.id, comment.id, reply.id, 'dislike')" :class="{'text-red-600': hasReacted(reply.dislikes)}">لم يعجبني ({{ getReactCount(reply.dislikes) }})</button>
                                                         <button @click="prepareReply(post.id, comment, reply.name)">رد</button>
@@ -450,7 +535,10 @@
                     editingCommentId: null,
                     editCommentText: '',
                     editingReplyId: null,
-                    editReplyText: ''
+                    editReplyText: '',
+                    editingPostId: null,
+                    editPostText: '',
+                    activeDropdownId: null
                 }
             },
             computed: {
@@ -467,8 +555,27 @@
                 formatTime(ts) {
                     return moment(ts).format('YYYY/MM/DD hh:mm A');
                 },
-                canEditComment(comment) {
-                    return moment().diff(moment(comment.timestamp), 'minutes') <= 15;
+                getCommentRemainingMinutes(item) {
+                    if (!item || !item.timestamp) return 0;
+                    const diff = 15 - moment().diff(moment(item.timestamp), 'minutes');
+                    return Math.max(0, diff);
+                },
+                canModifyComment(item) {
+                    if (this.isAdmin) return true;
+                    if (!this.isCommentOwner(item)) return false;
+                    return this.getCommentRemainingMinutes(item) > 0;
+                },
+                isCommentOwner(item) {
+                    if (this.isAdmin) return true;
+                    const userPhone = (this.currentUser && this.currentUser.phone ? String(this.currentUser.phone).trim() : '');
+                    const itemPhone = (item && item.phone ? String(item.phone).trim() : '');
+                    return !!(userPhone && itemPhone && userPhone === itemPhone);
+                },
+                toggleDropdown(id) {
+                    this.activeDropdownId = (this.activeDropdownId === id ? null : id);
+                },
+                closeDropdown() {
+                    this.activeDropdownId = null;
                 },
                 getReactCount(reactObj) {
                     return reactObj ? Object.keys(reactObj).length : 0;
@@ -550,8 +657,43 @@
                     }
                 },
 
+                startEditPost(post) {
+                    if (!this.canModifyComment(post)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لتعديل هذا المنشور.");
+                        return;
+                    }
+                    this.editingPostId = post.id;
+                    this.editPostText = post.text;
+                },
+                cancelEditPost() {
+                    this.editingPostId = null;
+                    this.editPostText = '';
+                },
+                saveEditPost(postId) {
+                    const text = (this.editPostText || '').trim();
+                    if (!text) return;
+                    const post = this.posts.find(p => p.id === postId);
+                    if (!this.canModifyComment(post)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لتعديل هذا المنشور.");
+                        this.editingPostId = null;
+                        return;
+                    }
+                    db.ref(`ideas_posts/${postId}`).update({
+                        text: text,
+                        edited: true,
+                        lastEdited: firebase.database.ServerValue.TIMESTAMP
+                    }).then(() => {
+                        this.editingPostId = null;
+                        this.editPostText = '';
+                    });
+                },
                 deletePost(postId) {
-                    if(confirm("هل أنت متأكد من مسح هذا المقترح؟")) {
+                    const post = this.posts.find(p => p.id === postId);
+                    if (!this.canModifyComment(post)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لحذف هذا المنشور.");
+                        return;
+                    }
+                    if(confirm("هل أنت متأكد من حذف هذا المقترح نهائياً؟")) {
                         db.ref('ideas_posts/' + postId).remove();
                     }
                 },
@@ -599,16 +741,21 @@
                 },
                 
                 submitComment(postId) {
-                    if (!this.currentUser.phone) return;
-                    const text = this.newComments[postId];
-                    if (!text || !text.trim()) return;
+                    const phone = (this.currentUser.phone || '').trim();
+                    const name = (this.currentUser.name || '').trim();
+                    if (!phone || !name) {
+                        alert("يرجى إدخال اسمك ورقم الموبايل أولاً لتتمكن من التعليق.");
+                        return;
+                    }
+                    const text = (this.newComments[postId] || '').trim();
+                    if (!text) return;
                     
                     const replyInfo = this.replyingTo[postId];
                     if (replyInfo) {
                         const replyRef = db.ref(`ideas_posts/${postId}/comments/${replyInfo.commentId}/replies`).push();
                         replyRef.set({
-                            name: this.currentUser.name,
-                            phone: this.currentUser.phone,
+                            name: name,
+                            phone: phone,
                             text: text,
                             replyToName: replyInfo.name,
                             timestamp: firebase.database.ServerValue.TIMESTAMP
@@ -616,8 +763,8 @@
                     } else {
                         const commentRef = db.ref(`ideas_posts/${postId}/comments`).push();
                         commentRef.set({
-                            name: this.currentUser.name,
-                            phone: this.currentUser.phone,
+                            name: name,
+                            phone: phone,
                             text: text,
                             timestamp: firebase.database.ServerValue.TIMESTAMP
                         });
@@ -627,11 +774,28 @@
                 },
                 
                 deleteComment(postId, commentId) {
-                    if(confirm("مسح التعليق؟")) db.ref(`ideas_posts/${postId}/comments/${commentId}`).remove();
+                    const post = this.posts.find(p => p.id === postId);
+                    const comment = post?.commentsList?.find(c => c.id === commentId);
+                    if (!this.canModifyComment(comment)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لحذف هذا التعليق.");
+                        return;
+                    }
+                    if(confirm("هل أنت متأكد من رغبتك في حذف هذا التعليق نهائياً؟")) {
+                        db.ref(`ideas_posts/${postId}/comments/${commentId}`).remove();
+                    }
                 },
                 
                 deleteReply(postId, commentId, replyId) {
-                    if(confirm("مسح الرد؟")) db.ref(`ideas_posts/${postId}/comments/${commentId}/replies/${replyId}`).remove();
+                    const post = this.posts.find(p => p.id === postId);
+                    const comment = post?.commentsList?.find(c => c.id === commentId);
+                    const reply = comment?.repliesList?.find(r => r.id === replyId);
+                    if (!this.canModifyComment(reply)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لحذف هذا الرد.");
+                        return;
+                    }
+                    if(confirm("هل أنت متأكد من رغبتك في حذف هذا الرد نهائياً؟")) {
+                        db.ref(`ideas_posts/${postId}/comments/${commentId}/replies/${replyId}`).remove();
+                    }
                 },
                 
                 reactComment(postId, commentId, type) {
@@ -672,36 +836,59 @@
                     });
                 },
                 
-                toggleMenu(id) {
-                    document.querySelectorAll('.dropdown-content').forEach(el => {
-                        if(el.id !== 'menu-'+id) el.classList.remove('show');
-                    });
-                    const menu = document.getElementById('menu-'+id);
-                    if(menu) menu.classList.toggle('show');
-                },
-                
                 startEditComment(postId, comment) {
+                    if (!this.canModifyComment(comment)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لتعديل هذا التعليق.");
+                        return;
+                    }
                     this.editingCommentId = comment.id;
                     this.editCommentText = comment.text;
-                    document.getElementById('menu-'+comment.id).classList.remove('show');
                 },
                 cancelEdit() { this.editingCommentId = null; },
                 saveEditComment(postId, commentId) {
-                    if(!this.editCommentText.trim()) return;
-                    db.ref(`ideas_posts/${postId}/comments/${commentId}`).update({ text: this.editCommentText }).then(() => {
+                    const text = (this.editCommentText || '').trim();
+                    if(!text) return;
+                    const post = this.posts.find(p => p.id === postId);
+                    const comment = post?.commentsList?.find(c => c.id === commentId);
+                    if (!this.canModifyComment(comment)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لتعديل هذا التعليق.");
+                        this.editingCommentId = null;
+                        return;
+                    }
+                    db.ref(`ideas_posts/${postId}/comments/${commentId}`).update({ 
+                        text: text,
+                        edited: true,
+                        lastEdited: firebase.database.ServerValue.TIMESTAMP 
+                    }).then(() => {
                         this.editingCommentId = null;
                     });
                 },
                 
                 startEditReply(postId, commentId, reply) {
+                    if (!this.canModifyComment(reply)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لتعديل هذا الرد.");
+                        return;
+                    }
                     this.editingReplyId = reply.id;
                     this.editReplyText = reply.text;
-                    document.getElementById('menu-'+reply.id).classList.remove('show');
                 },
                 cancelEditReply() { this.editingReplyId = null; },
                 saveEditReply(postId, commentId, replyId) {
-                    if(!this.editReplyText.trim()) return;
-                    db.ref(`ideas_posts/${postId}/comments/${commentId}/replies/${replyId}`).update({ text: this.editReplyText }).then(() => {
+                    const text = (this.editReplyText || '').trim();
+                    if(!text) return;
+                    const post = this.posts.find(p => p.id === postId);
+                    const comment = post?.commentsList?.find(c => c.id === commentId);
+                    const reply = comment?.repliesList?.find(r => r.id === replyId);
+                    if (!this.canModifyComment(reply)) {
+                        alert("عذراً، انتهت مهلة الـ 15 دقيقة المسموح بها لتعديل هذا الرد.");
+                        this.editingReplyId = null;
+                        return;
+                    }
+                    db.ref(`ideas_posts/${postId}/comments/${commentId}/replies/${replyId}`).update({ 
+                        text: text,
+                        edited: true,
+                        lastEdited: firebase.database.ServerValue.TIMESTAMP 
+                    }).then(() => {
                         this.editingReplyId = null;
                     });
                 },
@@ -772,8 +959,8 @@
                 }
                 
                 document.addEventListener('click', (e) => {
-                    if(!e.target.closest('.dropdown')) {
-                        document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
+                    if(!e.target.closest('.dropdown-trigger') && !e.target.closest('.dropdown-menu')) {
+                        this.activeDropdownId = null;
                     }
                 });
 
